@@ -38,6 +38,8 @@
     th, td { padding: 0.75rem 1rem; text-align: left; }
     tbody tr:nth-child(even) { background: var(--light-gray); }
     .category-row td { position: sticky; top: calc(var(--header-height) + var(--table-head-height)); background: #c8e6c9; font-weight: bold; height: var(--category-row-height); z-index: 2; }
+    tbody tr:hover { background: rgba(255, 0, 0, 0.1); }
+    tbody td:nth-child(1), tbody td:nth-child(2), tbody td:nth-child(3) { font-weight: 700; }
     #pesos-entrada-container { display: flex; flex-direction: column; align-items: center; }
     #pesos-entrada-container label { width: 200px; }
   </style>
@@ -61,7 +63,9 @@
             <label>Material<br><input list="datalist-entrada" id="entrada-material" required><datalist id="datalist-entrada"></datalist></label>
             <div id="error-entrada-material" class="error"></div>
             <label>Calibre<br><select id="entrada-calibre"><option disabled selected>Seleccione calibre</option></select></label>
-            <div id="pesos-entrada-container"><label>Peso (kg)<br><input type="number" step="0.01" class="entrada-peso" required></label></div>
+            <div id="pesos-entrada-container">
+              <label>Peso (kg)<br><input type="number" step="0.01" class="entrada-peso" required></label>
+            </div>
             <button type="submit">Registrar Paquetes</button>
           </form>
         </div>
@@ -108,23 +112,145 @@
   <script>
     firebase.initializeApp({apiKey:'AIzaSyCgDCzu5_k2_k1fb3vghS7MrZez87n8qjg',authDomain:'inventario-emumsa.firebaseapp.com',projectId:'inventario-emumsa'});
     const db = firebase.firestore();
-    const categories=['Tubería de Diámetro Menor','Tubería de Diámetro Mayor','PTR Negro Cuadrado','PTR Negro Rectangular','Polín Monten','Tubería Galvanizada','PTR Galvanizado','Varios'];
-    let materialNames=[];
-    function setupNav(){document.querySelectorAll('nav button').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const t=btn.dataset.target;document.querySelectorAll('main section').forEach(s=>s.classList.remove('active'));const sec=document.getElementById(t);sec.classList.add('active');sec.scrollIntoView({behavior:'smooth',block:'start'});if(t==='movimientos')renderInventario();}))}
-    async function loadMaterialNames(){const snap=await db.collection('materiales').get();materialNames=[...new Set(snap.docs.map(d=>d.data().nombre))].sort();['datalist-entrada','datalist-salida'].forEach(id=>{const dl=document.getElementById(id);dl.innerHTML='';materialNames.forEach(n=>dl.appendChild(new Option(n)))});}
-    function populateCategorias(){const sel=document.getElementById('nuevo-categoria');sel.innerHTML='';categories.forEach(c=>sel.appendChild(new Option(c,c)))}
-    async function cargarCalibres(name,id){const sel=document.getElementById(id);sel.innerHTML='<option disabled selected>Seleccione calibre</option>';const snap=await db.collection('materiales').where('nombre','==',name).get();snap.docs.forEach(d=>sel.appendChild(new Option(d.data().calibre,d.id)))}
-    async function cargarPaquetes(calId,id){const sel=document.getElementById(id);sel.innerHTML='<option disabled selected>Seleccione paquete</option>';const snap=await db.collection('paquetes').where('materialId','==',calId).where('estado','==','activo').get();snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.fecha_ingreso.toDate()-b.fecha_ingreso.toDate()).forEach(p=>sel.appendChild(new Option(p.peso_actual.toFixed(2)+' kg',p.id)));}
-    async function renderInventario(){const head=document.getElementById('inv-headers'),body=document.getElementById('inv-body');head.innerHTML='';body.innerHTML='';const mats=await db.collection('materiales').get(),pkgs=await db.collection('paquetes').where('estado','==','activo').get(),map={};pkgs.docs.forEach(d=>{const D=d.data();map[D.materialId]=map[D.materialId]||[];map[D.materialId].push({id:d.id,peso:D.peso_actual,fecha:D.fecha_ingreso.toDate()})});let maxP=0;const rows=mats.docs.map(m=>{const D=m.data(),lst=(map[m.id]||[]).sort((a,b)=>a.fecha-b.fecha),pesos=lst.map(x=>x.peso.toFixed(2));maxP=Math.max(maxP,pesos.length);return{id:m.id,cat:D.categoriaId||'Varios',nombre:D.nombre,calibre:D.calibre,pesos,pids:lst.map(x=>x.id)}}).sort((a,b)=>a.nombre.localeCompare(b.nombre)||a.calibre.localeCompare(b.calibre));['Material','Calibre','Total',...Array.from({length:maxP},(_,i)=>`Pk ${i+1}`)].forEach(txt=>{const th=document.createElement('th');th.textContent=txt;head.appendChild(th)});categories.forEach(cat=>{const grp=rows.filter(r=>r.cat===cat);if(!grp.length)return;const trC=document.createElement('tr');trC.classList.add('category-row');const tdC=document.createElement('td');tdC.colSpan=3+maxP;tdC.textContent=cat;trC.appendChild(tdC);body.appendChild(trC);grp.forEach(r=>{const tr=document.createElement('tr'),total=r.pesos.reduce((s,p)=>s+parseFloat(p),0).toFixed(2);[r.nombre,r.calibre,total].forEach(txt=>{const td=document.createElement('td');td.textContent=txt;tr.appendChild(td)});r.pesos.forEach(p=>{const td=document.createElement('td');td.textContent=p;tr.appendChild(td)});for(let i=r.pesos.length;i<maxP;i++)tr.appendChild(document.createElement('td'));body.appendChild(tr)})})}
+    const categories = ['Tubería de Diámetro Menor','Tubería de Diámetro Mayor','PTR Negro Cuadrado','PTR Negro Rectangular','Polín Monten','Tubería Galvanizada','PTR Galvanizado','Varios'];
+    let materialNames = [];
+    function setupNav() {
+      document.querySelectorAll('nav button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const target = btn.dataset.target;
+          document.querySelectorAll('main section').forEach(s => s.classList.remove('active'));
+          document.getElementById(target).classList.add('active');
+          document.getElementById(target).scrollIntoView({ behavior: 'smooth', block: 'start' });
+          if (target === 'movimientos') renderInventario();
+        });
+      });
+    }
+    async function loadMaterialNames() {
+      const snap = await db.collection('materiales').get();
+      materialNames = [...new Set(snap.docs.map(d => d.data().nombre))].sort();
+      ['datalist-entrada','datalist-salida'].forEach(id => {
+        const dl = document.getElementById(id); dl.innerHTML = '';
+        materialNames.forEach(n => dl.appendChild(new Option(n)));
+      });
+    }
+    function populateCategorias() {
+      const sel = document.getElementById('nuevo-categoria'); sel.innerHTML = '';
+      categories.forEach(c => sel.appendChild(new Option(c, c)));
+    }
+    async function cargarCalibres(name, id) {
+      const sel = document.getElementById(id); sel.innerHTML = '<option disabled selected>Seleccione calibre</option>';
+      const snap = await db.collection('materiales').where('nombre','==',name).get();
+      snap.docs.forEach(d => sel.appendChild(new Option(d.data().calibre, d.id)));
+    }
+    async function cargarPaquetes(calId, id) {
+      const sel = document.getElementById(id); sel.innerHTML = '<option disabled selected>Seleccione paquete</option>';
+      const snap = await db.collection('paquetes').where('materialId','==',calId).where('estado','==','activo').get();
+      snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a,b) => a.fecha_ingreso.toDate() - b.fecha_ingreso.toDate())
+        .forEach(p => sel.appendChild(new Option(p.peso_actual.toFixed(2)+' kg', p.id)));
+    }
+    async function renderInventario() {
+      const head = document.getElementById('inv-headers'), body = document.getElementById('inv-body');
+      head.innerHTML = ''; body.innerHTML = '';
+      const mats = await db.collection('materiales').get();
+      const pkgsSnap = await db.collection('paquetes').where('estado','==','activo').get();
+      const map = {};
+      pkgsSnap.docs.forEach(d => {
+        const D = d.data();
+        map[D.materialId] = map[D.materialId]||[];
+        map[D.materialId].push({ id: d.id, peso: D.peso_actual, fecha: D.fecha_ingreso.toDate() });
+      });
+      let maxP = 0, sumGeneral = 0;
+      const rows = mats.docs.map(m => {
+        const D = m.data();
+        const list = (map[m.id]||[]).sort((a,b)=>a.fecha-b.fecha);
+        const pesos = list.map(x => x.peso.toFixed(2));
+        maxP = Math.max(maxP, pesos.length);
+        return { id: m.id, cat: D.categoriaId||'Varios', nombre: D.nombre, calibre: D.calibre, pesos, pids: list.map(x=>x.id) };
+      }).sort((a,b)=>a.nombre.localeCompare(b.nombre)||a.calibre.localeCompare(b.calibre));
+      ['Material','Calibre','Total',...Array.from({length:maxP},(_,i)=>`Pk ${i+1}`)].forEach(txt=>{
+        const th = document.createElement('th'); th.textContent = txt; head.appendChild(th);
+      });
+      categories.forEach(cat => {
+        const grp = rows.filter(r=>r.cat===cat);
+        if (!grp.length) return;
+        const trC = document.createElement('tr'); trC.classList.add('category-row');
+        const tdC = document.createElement('td'); tdC.colSpan = 3+maxP; tdC.textContent = cat;
+        trC.appendChild(tdC); body.appendChild(trC);
+        grp.forEach(r => {
+          const tr = document.createElement('tr');
+          const total = r.pesos.reduce((s,p)=>s+parseFloat(p),0);
+          sumGeneral += total;
+          const totalStr = total.toFixed(2);
+          [r.nombre,r.calibre,totalStr].forEach(txt=>{ const td=document.createElement('td'); td.textContent = txt; tr.appendChild(td); });
+          r.pesos.forEach(p=>{ const td=document.createElement('td'); td.textContent = p; tr.appendChild(td); });
+          for (let i=r.pesos.length;i<maxP;i++) tr.appendChild(document.createElement('td'));
+          body.appendChild(tr);
+        });
+      });
+      const trSum = document.createElement('tr');
+      const tdLabel = document.createElement('td'); tdLabel.colSpan = 2; tdLabel.textContent = 'TOTAL GENERAL'; tdLabel.style.fontWeight = '700'; trSum.appendChild(tdLabel);
+      const tdSum = document.createElement('td'); tdSum.textContent = sumGeneral.toFixed(2); tdSum.style.fontWeight = '700'; trSum.appendChild(tdSum);
+      for (let i=0;i<maxP;i++) trSum.appendChild(document.createElement('td'));
+      body.appendChild(trSum);
+    }
     document.getElementById('entrada-material').addEventListener('change',e=>cargarCalibres(e.target.value,'entrada-calibre'));
-    const sm=document.getElementById('salida-material');if(sm)sm.addEventListener('change',e=>cargarCalibres(e.target.value,'salida-calibre'));
-    document.getElementById('entrada-calibre').addEventListener('change',()=>document.getElementById('pesos-entrada-container').innerHTML='<label>Peso (kg)<br><input type="number" step="0.01" class="entrada-peso" required></label>');
-    document.getElementById('pesos-entrada-container').addEventListener('input',e=>{if(e.target.classList.contains('entrada-peso')){const last=[...document.querySelectorAll('.entrada-peso')].pop();if(last.value){const lbl=document.createElement('label');lbl.innerHTML='Peso (kg)<br>';const ip=document.createElement('input');ip.type='number';ip.step='0.01';ip.className='entrada-peso';ip.required=true;lbl.appendChild(ip);document.getElementById('pesos-entrada-container').appendChild(lbl)}}});
-    document.getElementById('form-entrada').addEventListener('submit',async e=>{e.preventDefault();const m=document.getElementById('entrada-material').value,c=document.getElementById('entrada-calibre').value,pesos=[...document.querySelectorAll('.entrada-peso')].map(i=>parseFloat(i.value)).filter(v=>v);for(const p of pesos)await db.collection('paquetes').add({materialId:c,peso_inicial:p,peso_actual:p,fecha_ingreso:new Date(),estado:'activo'});e.target.reset();document.getElementById('pesos-entrada-container').innerHTML='<label>Peso (kg)<br><input type="number" step="0.01" class="entrada-peso" required></label>';renderInventario()});
+    const sm = document.getElementById('salida-material'); if (sm) sm.addEventListener('change',e=>cargarCalibres(e.target.value,'salida-calibre'));
+    document.getElementById('entrada-calibre').addEventListener('change',()=>{
+      document.getElementById('pesos-entrada-container').innerHTML =
+        '<label>Peso (kg)<br><input type="number" step="0.01" class="entrada-peso" required></label>';
+    });
+    document.getElementById('pesos-entrada-container').addEventListener('input',e=>{
+      if (e.target.classList.contains('entrada-peso')) {
+        const last = [...document.querySelectorAll('.entrada-peso')].pop();
+        if (last.value) {
+          const lbl = document.createElement('label'); lbl.innerHTML = 'Peso (kg)<br>';
+          const ip = document.createElement('input'); ip.type = 'number'; ip.step = '0.01'; ip.className = 'entrada-peso'; ip.required = false;
+          lbl.appendChild(ip);
+          document.getElementById('pesos-entrada-container').appendChild(lbl);
+        }
+      }
+    });
+    document.getElementById('form-entrada').addEventListener('submit',async e=>{
+      e.preventDefault();
+      const m=document.getElementById('entrada-material').value;
+      const c=document.getElementById('entrada-calibre').value;
+      const pesos=[...document.querySelectorAll('.entrada-peso')].map(i=>parseFloat(i.value)).filter(v=>v);
+      for(const p of pesos) await db.collection('paquetes').add({ materialId:c,peso_inicial:p,peso_actual:p,fecha_ingreso:new Date(),estado:'activo' });
+      e.target.reset();
+      document.getElementById('pesos-entrada-container').innerHTML =
+        '<label>Peso (kg)<br><input type="number" step="0.01" class="entrada-peso" required></label>';
+      renderInventario();
+    });
     document.getElementById('salida-calibre').addEventListener('change',e=>cargarPaquetes(e.target.value,'salida-paquete'));
-    document.getElementById('form-salida').addEventListener('submit',async e=>{e.preventDefault();const pkg=document.getElementById('salida-paquete').value,p=parseFloat(document.getElementById('salida-peso').value);const ref=db.collection('paquetes').doc(pkg),snap=await ref.get(),newP=snap.data().peso_actual-p;await ref.update({peso_actual:newP,estado:newP<=0?'agotado':'activo'});e.target.reset();renderInventario()});
-    document.getElementById('form-nuevo-item').addEventListener('submit',async e=>{e.preventDefault();const n=document.getElementById('nuevo-nombre').value.trim(),cl=document.getElementById('nuevo-calibre').value.trim(),cat=document.getElementById('nuevo-categoria').value,err=document.getElementById('error-nuevo-item');err.textContent='';if(!n||!cl){err.textContent='Nombre y calibre obligatorios';return}const ex=await db.collection('materiales').where('nombre','==',n).where('calibre','==',cl).get();if(!ex.empty){err.textContent='Ítem ya existe';return}await db.collection('materiales').add({nombre:n,calibre:cl,categoriaId:cat});e.target.reset();await loadMaterialNames();renderInventario()});
-    (async()=>{setupNav();populateCategorias();await loadMaterialNames();renderInventario()})();
+    document.getElementById('form-salida').addEventListener('submit',async e=>{
+      e.preventDefault();
+      const pkg=document.getElementById('salida-paquete').value;
+      const p=parseFloat(document.getElementById('salida-peso').value);
+      const ref=db.collection('paquetes').doc(pkg);
+      const snap=await ref.get();
+      const newP=snap.data().peso_actual-p;
+      await ref.update({ peso_actual:newP, estado: newP<=0? 'agotado':'activo' });
+      e.target.reset();
+      renderInventario();
+    });
+    document.getElementById('form-nuevo-item').addEventListener('submit',async e=>{
+      e.preventDefault();
+      const n=document.getElementById('nuevo-nombre').value.trim();
+      const cl=document.getElementById('nuevo-calibre').value.trim();
+      const cat=document.getElementById('nuevo-categoria').value;
+      const err=document.getElementById('error-nuevo-item'); err.textContent='';
+      if(!n||!cl){ err.textContent='Nombre y calibre obligatorios'; return; }
+      const ex=await db.collection('materiales').where('nombre','==',n).where('calibre','==',cl).get();
+      if(!ex.empty){ err.textContent='Ítem ya existe'; return; }
+      await db.collection('materiales').add({ nombre:n, calibre:cl, categoriaId:cat });
+      e.target.reset();
+      await loadMaterialNames();
+      renderInventario();
+    });
+    (async()=>{ setupNav(); populateCategorias(); await loadMaterialNames(); renderInventario(); })();
   </script>
 </body>
 </html>
