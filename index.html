@@ -4,244 +4,127 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gestión de Inventario de Acero</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
   <style>
-    body { font-family: 'Roboto', sans-serif; margin:0; padding:0; background:#f5f5f5; }
-    .site-header{display:flex;justify-content:space-between;align-items:center;background:#4d4d4d;padding:0.5rem 1rem;}
-    nav button { display: inline-block; width: auto; background: #008040; color: #fff; border: none; padding: 0.5rem 1rem; margin-right: 0.5rem; border-radius: 4px; cursor: pointer; }
-    nav button.active{background:#00a050;}
-    section{display:none;padding:1rem;}
-    section.active{display:block;}
-    .flex{display:flex;gap:1rem;}
-    .box{background:#fff;padding:1rem;border-radius:6px;flex:1;box-shadow:0 2px 4px rgba(0,0,0,0.1);}
-    label{display:block;margin-bottom:0.5rem;}
-    input, select { width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-    button[type=submit]{width:auto;background:#008040;color:#fff;border:none;cursor:pointer;}
-    #pesos-entrada-container label{width:180px;margin:0 auto;}
-    .error{color:red;font-size:0.9rem;margin-top:-0.5rem;margin-bottom:0.5rem;}
-    table{width:100%;border-collapse:collapse;margin-top:1rem;}
-    th,td{border:1px solid #ccc;padding:0.5rem;text-align:left;}
-    th{background:#00a050;color:#fff;}
+    :root {
+      --primary-green: #006644;
+      --secondary-green: #009977;
+      --light-gray: #f0f0f0;
+      --dark-gray: #333;
+      --font-family: 'Roboto', sans-serif;
+      --header-height: 72px;
+      --table-head-height: 56px;
+      --category-row-height: 40px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 0; font-family: var(--font-family); background: var(--light-gray); color: var(--dark-gray); }
+    .site-header { position: fixed; top: 0; left: 0; right: 0; height: var(--header-height); display: flex; justify-content: space-between; align-items: center; padding: 0 2rem; background: linear-gradient(90deg, var(--primary-green), var(--secondary-green)); z-index: 1000; }
+    nav { display: flex; gap: 1rem; }
+    nav button { background: transparent; border: none; color: #fff; font-weight: 500; padding: 0.5rem 1rem; cursor: pointer; transition: background 0.3s; }
+    nav button:hover, nav button.active { background: rgba(255,255,255,0.2); }
+    main { margin: calc(var(--header-height) + 1rem) auto 2rem; max-width: 1200px; padding: 0 1rem; }
+    h2 { font-size: 1.75rem; margin-bottom: 1rem; border-bottom: 2px solid var(--primary-green); padding-bottom: 0.5rem; }
+    .flex { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .box { background: #fff; border-radius: 8px; padding: 1.5rem; flex: 1; min-width: 280px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+    label { display: block; font-weight: 500; margin-bottom: 0.5rem; }
+    input, select, button[type="submit"] { width: 100%; padding: 0.6rem; margin-bottom: 1rem; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
+    button[type="submit"] { background: var(--primary-green); color: #fff; border: none; cursor: pointer; transition: background 0.3s; }
+    button[type="submit"]:hover { background: var(--secondary-green); }
+    .error { color: #c00; font-size: 0.9rem; margin-bottom: 1rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 2rem; background: #fff; }
+    thead th { position: sticky; top: var(--header-height); height: var(--table-head-height); background: var(--primary-green); color: #fff; padding: 0.75rem 1rem; text-align: left; z-index: 3; }
+    th, td { padding: 0.75rem 1rem; text-align: left; }
+    tbody tr:nth-child(even) { background: var(--light-gray); }
+    .category-row td { position: sticky; top: calc(var(--header-height) + var(--table-head-height)); background: #c8e6c9; font-weight: bold; height: var(--category-row-height); z-index: 2; }
+    #pesos-entrada-container { display: flex; flex-direction: column; align-items: center; }
+    #pesos-entrada-container label { width: 200px; }
   </style>
 </head>
 <body>
   <header class="site-header">
-    <div>
+    <nav>
       <button data-target="movimientos" class="active">Movimientos</button>
       <button data-target="nuevo-item">Nuevo Ítem</button>
       <button data-target="reportes">Reportes</button>
-    </div>
+    </nav>
     <img src="logo-con-nombre-transparencia.png" alt="Logo" style="height:50px;">
   </header>
-
-  <section id="movimientos" class="active">
-    <h2>Movimientos de Material</h2>
-    <div class="flex">
+  <main>
+    <section id="movimientos" class="active">
+      <h2>Movimientos de Material</h2>
+      <div class="flex">
+        <div class="box">
+          <h3>Entrada de Material</h3>
+          <form id="form-entrada">
+            <label>Material<br><input list="datalist-entrada" id="entrada-material" required><datalist id="datalist-entrada"></datalist></label>
+            <div id="error-entrada-material" class="error"></div>
+            <label>Calibre<br><select id="entrada-calibre"><option disabled selected>Seleccione calibre</option></select></label>
+            <div id="pesos-entrada-container"><label>Peso (kg)<br><input type="number" step="0.01" class="entrada-peso" required></label></div>
+            <button type="submit">Registrar Paquetes</button>
+          </form>
+        </div>
+        <div class="box">
+          <h3>Salida de Material</h3>
+          <form id="form-salida">
+            <label>Material<br><input list="datalist-salida" id="salida-material" required><datalist id="datalist-salida"></datalist></label>
+            <div id="error-salida-material" class="error"></div>
+            <label>Calibre<br><select id="salida-calibre"><option disabled selected>Seleccione calibre</option></select></label>
+            <label>Paquete<br><select id="salida-paquete"><option disabled selected>Seleccione paquete</option></select></label>
+            <label>Peso a descontar (kg)<br><input type="number" step="0.01" id="salida-peso" required></label>
+            <button type="submit">Registrar Salida</button>
+          </form>
+        </div>
+      </div>
+      <h3>Inventario</h3>
+      <table id="tabla-inventario">
+        <thead><tr id="inv-headers"></tr></thead>
+        <tbody id="inv-body"></tbody>
+      </table>
+    </section>
+    <section id="nuevo-item">
+      <h2>Alta de Nuevo Ítem</h2>
       <div class="box">
-        <h3>Entrada de Material</h3>
-        <form id="form-entrada">
-          <label>Material<br><input list="datalist-entrada" id="entrada-material" required></label>
-          <datalist id="datalist-entrada"></datalist>
-          <div id="error-entrada-material" class="error"></div>
-          <label>Calibre<br><select id="entrada-calibre"><option value="" disabled selected>Seleccione calibre</option></select></label>
-          <div id="pesos-entrada-container">
-            <label>Peso (kg)<br><input type="number" step="0.01" class="entrada-peso" required></label>
-          </div>
-          <button type="submit">Registrar Paquetes</button>
+        <form id="form-nuevo-item">
+          <label>Nombre<br><input type="text" id="nuevo-nombre" required></label>
+          <label>Calibre<br><input type="text" id="nuevo-calibre" required></label>
+          <label>Categoría<br><select id="nuevo-categoria"></select></label>
+          <button type="submit">Agregar Ítem</button>
+          <div id="error-nuevo-item" class="error"></div>
         </form>
       </div>
+    </section>
+    <section id="reportes">
+      <h2>Reportes</h2>
       <div class="box">
-        <h3>Salida de Material</h3>
-        <form id="form-salida">
-          <label>Material<br><input list="datalist-salida" id="salida-material" required></label>
-          <datalist id="datalist-salida"></datalist>
-          <div id="error-salida-material" class="error"></div>
-          <label>Calibre<br><select id="salida-calibre"><option value="" disabled selected>Seleccione calibre</option></select></label>
-          <label>Paquete<br><select id="salida-paquete"><option value="" disabled selected>Seleccione paquete</option></select></label>
-          <label>Peso a descontar (kg)<br><input type="number" step="0.01" id="salida-peso" required></label>
-          <button type="submit">Registrar Salida</button>
-        </form>
+        <label>Desde<br><input type="date" id="fecha-desde"></label>
+        <label>Hasta<br><input type="date" id="fecha-hasta"></label>
+        <button type="submit" id="btn-reporte">Generar</button>
+        <div class="flex"><div class="box">Entradas:<div id="total-entradas">0</div></div><div class="box">Salidas:<div id="total-salidas">0</div></div></div>
       </div>
-    </div>
-    <h3>Inventario</h3>
-    <table id="tabla-inventario">
-      <thead><tr id="inv-headers"></tr></thead>
-      <tbody id="inv-body"></tbody>
-    </table>
-  </section>
-
-  <section id="nuevo-item">
-    <h2>Alta de Nuevo Ítem</h2>
-    <div class="box">
-      <form id="form-nuevo-item">
-        <label>Nombre<br><input type="text" id="nuevo-nombre" required></label>
-        <label>Calibre<br><input type="text" id="nuevo-calibre" required></label>
-        <label>Categoría<br><select id="nuevo-categoria"></select></label>
-        <button type="submit">Agregar Ítem</button>
-        <div id="error-nuevo-item" class="error"></div>
-      </form>
-    </div>
-  </section>
-
-  <section id="reportes">
-    <h2>Reportes</h2>
-    <!-- Implementar según necesidad -->
-  </section>
-
+    </section>
+  </main>
   <script>
     firebase.initializeApp({apiKey:'AIzaSyCgDCzu5_k2_k1fb3vghS7MrZez87n8qjg',authDomain:'inventario-emumsa.firebaseapp.com',projectId:'inventario-emumsa'});
     const db = firebase.firestore();
-    const categories = ['Tubería de Diámetro Menor','Tubería de Diámetro Mayor','PTR Negro Cuadrado','PTR Negro Rectangular','Polín Monten','Tubería Galvanizada','PTR Galvanizado','Varios'];
-    let materialNames = [];
-
-    function setupNav() {
-      document.querySelectorAll('header button').forEach(btn => btn.addEventListener('click', () => {
-        document.querySelectorAll('header button').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        document.querySelectorAll('section').forEach(sec => sec.classList.remove('active'));
-        document.getElementById(btn.dataset.target).classList.add('active');
-        if (btn.dataset.target === 'movimientos') renderInventario();
-      }));
-    }
-
-    async function loadMaterialNames() {
-      const snap = await db.collection('materiales').get();
-      materialNames = [...new Set(snap.docs.map(d => d.data().nombre))].sort();
-      const d1 = document.getElementById('datalist-entrada');
-      const d2 = document.getElementById('datalist-salida');
-      d1.innerHTML = '';
-      d2.innerHTML = '';
-      materialNames.forEach(n => { d1.appendChild(new Option(n)); d2.appendChild(new Option(n)); });
-    }
-
-    function populateCategorias() {
-      const sel = document.getElementById('nuevo-categoria');
-      sel.innerHTML = '';
-      categories.forEach(c => sel.appendChild(new Option(c, c)));
-    }
-
-    async function cargarCalibres(mat, selId) {
-      const sel = document.getElementById(selId);
-      sel.innerHTML = '<option value="" disabled selected>Seleccione calibre</option>';
-      const snap = await db.collection('materiales').where('nombre','==',mat).get();
-      snap.docs.forEach(d => sel.appendChild(new Option(d.data().calibre, d.id)));
-    }
-
-    async function cargarPaquetes(calId, selId) {
-      const sel = document.getElementById(selId);
-      sel.innerHTML = '<option value="" disabled selected>Seleccione paquete</option>';
-      const snap = await db.collection('paquetes').where('materialId','==',calId).where('estado','==','activo').get();
-      snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.fecha_ingreso.toDate()-b.fecha_ingreso.toDate())
-        .forEach(p=>sel.appendChild(new Option(p.peso_actual.toFixed(2)+' kg', p.id)));
-    }
-
-    async function renderInventario() {
-      const headers = document.getElementById('inv-headers');
-      const body = document.getElementById('inv-body');
-      headers.innerHTML = '';
-      body.innerHTML = '';
-      const mats = await db.collection('materiales').get();
-      const pkgsSnap = await db.collection('paquetes').where('estado','==','activo').get();
-      const map = {};
-      pkgsSnap.docs.forEach(d => {
-        const data = d.data();
-        map[data.materialId] = map[data.materialId] || [];
-        map[data.materialId].push({id:d.id, peso:data.peso_actual, fecha:data.fecha_ingreso.toDate()});
-      });
-      let maxP = 0;
-      const rows = mats.docs.map(m => {
-        const d = m.data();
-        const list = (map[m.id]||[]).sort((a,b)=>a.fecha-b.fecha);
-        const pesos = list.map(x=>x.peso.toFixed(2));
-        maxP = Math.max(maxP, pesos.length);
-        return {id:m.id, cat:d.categoriaId||'Varios', nombre:d.nombre, calibre:d.calibre, pesos, pids:list.map(x=>x.id)};
-      });
-      rows.sort((a,b) => a.nombre.localeCompare(b.nombre) || a.calibre.localeCompare(b.calibre));
-      ['Material','Calibre','Total',...Array.from({length:maxP},(_,i)=>`Pk ${i+1}`)].forEach(txt => {
-        const th = document.createElement('th'); th.textContent = txt; headers.appendChild(th);
-      });
-      categories.forEach(cat => {
-        const grp = rows.filter(r=>r.cat===cat);
-        if (!grp.length) return;
-        const trC = document.createElement('tr'); trC.style.fontWeight='bold';
-        const tdC = document.createElement('td'); tdC.colSpan = 3+maxP; tdC.textContent = cat;
-        trC.appendChild(tdC); body.appendChild(trC);
-        grp.forEach(r => {
-          const tr = document.createElement('tr');
-          const total = r.pesos.reduce((s,p)=>s+parseFloat(p),0).toFixed(2);
-          [r.nombre, r.calibre, total].forEach(txt=>{ const td=document.createElement('td');td.textContent=txt;tr.appendChild(td); });
-          r.pesos.forEach(p=>{const td=document.createElement('td');td.textContent=p;tr.appendChild(td);});
-          for(let i=r.pesos.length;i<maxP;i++) tr.appendChild(document.createElement('td'));
-          body.appendChild(tr);
-        });
-      });
-    }
-
-    document.getElementById('entrada-material').addEventListener('change', e => cargarCalibres(e.target.value, 'entrada-calibre'));
-    document.getElementById('salida-material').addEventListener('change', e => cargarCalibres(e.target.value, 'salida-calibre'));
-    document.getElementById('entrada-calibre').addEventListener('change', () => {
-      // Clear existing peso fields
-      const c = document.getElementById('pesos-entrada-container');
-      c.innerHTML = '<label>Peso (kg)<br><input type="number" step="0.01" class="entrada-peso" required></label>';
-    });
-    document.getElementById('entrada-pecos-entrada-container'); // no op
-
-    // Dynamic pesos
-    document.getElementById('pesos-entrada-container').addEventListener('input', e => {
-      if (e.target.classList.contains('entrada-peso')) {
-        const inputs = [...document.querySelectorAll('.entrada-peso')];
-        const last = inputs[inputs.length-1];
-        if (last.value) {
-          const lbl = document.createElement('label');
-          lbl.innerHTML = 'Peso (kg)<br>';
-          const inp = document.createElement('input'); inp.type='number'; inp.step='0.01'; inp.className='entrada-peso';
-          lbl.appendChild(inp);
-          document.getElementById('pesos-entrada-container').appendChild(lbl);
-        }
-      }
-    });
-
-    document.getElementById('form-entrada').addEventListener('submit', async e => {
-      e.preventDefault();
-      const mat = document.getElementById('entrada-material').value;
-      const cal = document.getElementById('entrada-calibre').value;
-      if (!mat||!cal) return;
-      const pesos = [...document.querySelectorAll('.entrada-peso')].map(i=>parseFloat(i.value)).filter(v=>v);
-      for(const p of pesos) await db.collection('paquetes').add({materialId:cal,peso_inicial:p,peso_actual:p,fecha_ingreso:new Date(),estado:'activo'});
-      e.target.reset();
-      document.getElementById('pesos-entrada-container').innerHTML='<label>Peso (kg)<br><input type="number" step="0.01" class="entrada-peso" required></label>';
-      renderInventario();
-    });
-
-    document.getElementById('salida-calibre').addEventListener('change', e => cargarPaquetes(e.target.value, 'salida-paquete'));
-    document.getElementById('form-salida').addEventListener('submit', async e => {
-      e.preventDefault();
-      const pkg = document.getElementById('salida-paquete').value;
-      const p = parseFloat(document.getElementById('salida-peso').value);
-      const ref = db.collection('paquetes').doc(pkg);
-      const snap = await ref.get();
-      const newPeso = snap.data().peso_actual - p;
-      await ref.update({peso_actual:newPeso,estado:newPeso<=0?'agotado':'activo'});
-      e.target.reset(); renderInventario();
-    });
-
-    document.getElementById('form-nuevo-item').addEventListener('submit', async e => {
-      e.preventDefault();
-      const n = document.getElementById('nuevo-nombre').value.trim();
-      const c = document.getElementById('nuevo-calibre').value.trim();
-      const cat = document.getElementById('nuevo-categoria').value;
-      const err = document.getElementById('error-nuevo-item'); err.textContent = '';
-      if (!n||!c) { err.textContent='Nombre y calibre obligatorios'; return; }
-      const ex = await db.collection('materiales').where('nombre','==',n).where('calibre','==',c).get();
-      if (!ex.empty) { err.textContent='Ítem ya existe'; return; }
-      await db.collection('materiales').add({nombre:n,calibre:c,categoriaId:cat});
-      e.target.reset(); loadMaterialNames(); renderInventario();
-    });
-
-    // Init
-    (async()=>{setupNav();populateCategorias();await loadMaterialNames();renderInventario();})();
+    const categories=['Tubería de Diámetro Menor','Tubería de Diámetro Mayor','PTR Negro Cuadrado','PTR Negro Rectangular','Polín Monten','Tubería Galvanizada','PTR Galvanizado','Varios'];
+    let materialNames=[];
+    function setupNav(){document.querySelectorAll('nav button').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const t=btn.dataset.target;document.querySelectorAll('main section').forEach(s=>s.classList.remove('active'));const sec=document.getElementById(t);sec.classList.add('active');sec.scrollIntoView({behavior:'smooth',block:'start'});if(t==='movimientos')renderInventario();}))}
+    async function loadMaterialNames(){const snap=await db.collection('materiales').get();materialNames=[...new Set(snap.docs.map(d=>d.data().nombre))].sort();['datalist-entrada','datalist-salida'].forEach(id=>{const dl=document.getElementById(id);dl.innerHTML='';materialNames.forEach(n=>dl.appendChild(new Option(n)))});}
+    function populateCategorias(){const sel=document.getElementById('nuevo-categoria');sel.innerHTML='';categories.forEach(c=>sel.appendChild(new Option(c,c)))}
+    async function cargarCalibres(name,id){const sel=document.getElementById(id);sel.innerHTML='<option disabled selected>Seleccione calibre</option>';const snap=await db.collection('materiales').where('nombre','==',name).get();snap.docs.forEach(d=>sel.appendChild(new Option(d.data().calibre,d.id)))}
+    async function cargarPaquetes(calId,id){const sel=document.getElementById(id);sel.innerHTML='<option disabled selected>Seleccione paquete</option>';const snap=await db.collection('paquetes').where('materialId','==',calId).where('estado','==','activo').get();snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.fecha_ingreso.toDate()-b.fecha_ingreso.toDate()).forEach(p=>sel.appendChild(new Option(p.peso_actual.toFixed(2)+' kg',p.id)));}
+    async function renderInventario(){const head=document.getElementById('inv-headers'),body=document.getElementById('inv-body');head.innerHTML='';body.innerHTML='';const mats=await db.collection('materiales').get(),pkgs=await db.collection('paquetes').where('estado','==','activo').get(),map={};pkgs.docs.forEach(d=>{const D=d.data();map[D.materialId]=map[D.materialId]||[];map[D.materialId].push({id:d.id,peso:D.peso_actual,fecha:D.fecha_ingreso.toDate()})});let maxP=0;const rows=mats.docs.map(m=>{const D=m.data(),lst=(map[m.id]||[]).sort((a,b)=>a.fecha-b.fecha),pesos=lst.map(x=>x.peso.toFixed(2));maxP=Math.max(maxP,pesos.length);return{id:m.id,cat:D.categoriaId||'Varios',nombre:D.nombre,calibre:D.calibre,pesos,pids:lst.map(x=>x.id)}}).sort((a,b)=>a.nombre.localeCompare(b.nombre)||a.calibre.localeCompare(b.calibre));['Material','Calibre','Total',...Array.from({length:maxP},(_,i)=>`Pk ${i+1}`)].forEach(txt=>{const th=document.createElement('th');th.textContent=txt;head.appendChild(th)});categories.forEach(cat=>{const grp=rows.filter(r=>r.cat===cat);if(!grp.length)return;const trC=document.createElement('tr');trC.classList.add('category-row');const tdC=document.createElement('td');tdC.colSpan=3+maxP;tdC.textContent=cat;trC.appendChild(tdC);body.appendChild(trC);grp.forEach(r=>{const tr=document.createElement('tr'),total=r.pesos.reduce((s,p)=>s+parseFloat(p),0).toFixed(2);[r.nombre,r.calibre,total].forEach(txt=>{const td=document.createElement('td');td.textContent=txt;tr.appendChild(td)});r.pesos.forEach(p=>{const td=document.createElement('td');td.textContent=p;tr.appendChild(td)});for(let i=r.pesos.length;i<maxP;i++)tr.appendChild(document.createElement('td'));body.appendChild(tr)})})}
+    document.getElementById('entrada-material').addEventListener('change',e=>cargarCalibres(e.target.value,'entrada-calibre'));
+    const sm=document.getElementById('salida-material');if(sm)sm.addEventListener('change',e=>cargarCalibres(e.target.value,'salida-calibre'));
+    document.getElementById('entrada-calibre').addEventListener('change',()=>document.getElementById('pesos-entrada-container').innerHTML='<label>Peso (kg)<br><input type="number" step="0.01" class="entrada-peso" required></label>');
+    document.getElementById('pesos-entrada-container').addEventListener('input',e=>{if(e.target.classList.contains('entrada-peso')){const last=[...document.querySelectorAll('.entrada-peso')].pop();if(last.value){const lbl=document.createElement('label');lbl.innerHTML='Peso (kg)<br>';const ip=document.createElement('input');ip.type='number';ip.step='0.01';ip.className='entrada-peso';ip.required=true;lbl.appendChild(ip);document.getElementById('pesos-entrada-container').appendChild(lbl)}}});
+    document.getElementById('form-entrada').addEventListener('submit',async e=>{e.preventDefault();const m=document.getElementById('entrada-material').value,c=document.getElementById('entrada-calibre').value,pesos=[...document.querySelectorAll('.entrada-peso')].map(i=>parseFloat(i.value)).filter(v=>v);for(const p of pesos)await db.collection('paquetes').add({materialId:c,peso_inicial:p,peso_actual:p,fecha_ingreso:new Date(),estado:'activo'});e.target.reset();document.getElementById('pesos-entrada-container').innerHTML='<label>Peso (kg)<br><input type="number" step="0.01" class="entrada-peso" required></label>';renderInventario()});
+    document.getElementById('salida-calibre').addEventListener('change',e=>cargarPaquetes(e.target.value,'salida-paquete'));
+    document.getElementById('form-salida').addEventListener('submit',async e=>{e.preventDefault();const pkg=document.getElementById('salida-paquete').value,p=parseFloat(document.getElementById('salida-peso').value);const ref=db.collection('paquetes').doc(pkg),snap=await ref.get(),newP=snap.data().peso_actual-p;await ref.update({peso_actual:newP,estado:newP<=0?'agotado':'activo'});e.target.reset();renderInventario()});
+    document.getElementById('form-nuevo-item').addEventListener('submit',async e=>{e.preventDefault();const n=document.getElementById('nuevo-nombre').value.trim(),cl=document.getElementById('nuevo-calibre').value.trim(),cat=document.getElementById('nuevo-categoria').value,err=document.getElementById('error-nuevo-item');err.textContent='';if(!n||!cl){err.textContent='Nombre y calibre obligatorios';return}const ex=await db.collection('materiales').where('nombre','==',n).where('calibre','==',cl).get();if(!ex.empty){err.textContent='Ítem ya existe';return}await db.collection('materiales').add({nombre:n,calibre:cl,categoriaId:cat});e.target.reset();await loadMaterialNames();renderInventario()});
+    (async()=>{setupNav();populateCategorias();await loadMaterialNames();renderInventario()})();
   </script>
 </body>
 </html>
