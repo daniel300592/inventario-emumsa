@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión de Inventario de Acero</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+    nav { background: #333; color: #fff; padding: 1rem; display: flex; gap: 1rem; }
+    nav button { background: #555; color: #fff; border: none; padding: 0.5rem 1rem; cursor: pointer; }
+    nav button.active { background: #777; }
+    section { display: none; padding: 1rem; }
+    section.active { display: block; }
+    .flex { display: flex; gap: 1rem; }
+    .box { flex: 1; padding: 1rem; border: 1px solid #ccc; }
+    .full { width: 100%; margin-top: 1rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; table-layout: auto; }
+    #tabla-inventario th:nth-child(-n+3), #tabla-inventario td:nth-child(-n+3) { white-space: nowrap; width: 1%; }
+    #tabla-inventario th:nth-child(n+4), #tabla-inventario td:nth-child(n+4) { min-width: 120px; }
+    th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: left; }
+    .error { color: red; }
+    .category-row td { background: #eee; font-weight: bold; text-align: center; }
+    #btn-toggle-edit { margin-left: 1rem; padding: 0.2rem 0.5rem; }
+  </style>
+</head>
+<body>
+  <nav>
+    <button data-target="movimientos" class="active">Movimientos</button>
+    <button data-target="nuevo-item">Nuevo Ítem</button>
+    <button data-target="reportes">Reportes</button>
+  </nav>
+
+  <section id="movimientos" class="active">
+    <h2>Movimientos de Material</h2>
+    <div class="flex">
+      <div class="box">
+        <h3>Entrada de Material</h3>
+        <form id="form-entrada">
+          <label>Material:<br><select id="select-material-entrada"></select></label><br>
+          <label>Calibre:<br><select id="select-calibre-entrada"></select></label><br>
+          <label>Peso (kg):<br><input type="number" id="entrada-peso" step="0.01" required></label><br>
+          <button type="submit">Registrar Entrada</button>
+        </form>
+      </div>
+      <div class="box">
+        <h3>Salida de Material</h3>
+        <form id="form-salida">
+          <label>Material:<br><select id="select-material-salida"></select></label><br>
+          <label>Calibre:<br><select id="select-calibre-salida"></select></label><br>
+          <label>Paquete:<br><select id="select-paquete-salida"></select></label><br>
+          <label>Peso a descontar (kg):<br><input type="number" id="salida-peso" step="0.01" required></label><br>
+          <button type="submit">Registrar Salida</button>
+        </form>
+      </div>
+    </div>
+    <div class="full">
+      <h3>Inventario <button id="btn-toggle-edit">Editar</button></h3>
+      <table id="tabla-inventario">
+        <thead><tr id="header-inventario"></tr></thead>
+        <tbody id="body-inventario"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="nuevo-item">
+    <h2>Alta de Nuevo Ítem</h2>
+    <div class="box">
+      <form id="form-nuevo-item">
+        <label>Nombre:<br><input type="text" id="input-nombre" required></label><br>
+        <label>Calibre:<br><input type="text" id="input-calibre" required></label><br>
+        <label>Categoría:<br><select id="select-categoria"></select></label><br>
+        <button type="submit">Agregar Ítem</button>
+        <div id="error-nuevo-item" class="error"></div>
+      </form>
+    </div>
+  </section>
+
+  <section id="reportes">
+    <h2>Reportes de Movimientos</h2>
+    <label>Desde:<br><input type="date" id="fecha-desde"></label>
+    <label>Hasta:<br><input type="date" id="fecha-hasta"></input></label>
+    <button id="btn-generar-reportes">Generar</button>
+    <div class="flex">
+      <div class="box">Entradas: <div id="total-entradas">0</div></div>
+      <div class="box">Salidas: <div id="total-salidas">0</div></div>
+    </div>
+  </section>
+
+  <script>
+    const categories = ['Tubería de Diámetro Menor','Tubería de Diámetro Mayor','PTR Negro Cuadrado','PTR Negro Rectangular','Polín Monten','Tubería Galvanizada','PTR Galvanizado','Varios'];
+    firebase.initializeApp({apiKey:'AIzaSyCgDCzu5_k2_k1fb3vghS7MrZez87n8qjg',authDomain:'inventario-emumsa.firebaseapp.com',projectId:'inventario-emumsa',storageBucket:'inventario-emumsa.appspot.com',messagingSenderId:'754900213862',appId:'1:754900213862:web:ba39a2b681f616a0064da7',measurementId:'G-JGFC43QYL3'});
+    const db = firebase.firestore();
+
+    function setupNav(){document.querySelectorAll('nav button').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('section').forEach(sec=>sec.classList.remove('active'));document.getElementById(btn.dataset.target).classList.add('active');if(btn.dataset.target==='movimientos') renderInventario();}));}
+    function populateCategoria(){const sel=document.getElementById('select-categoria');sel.innerHTML='';categories.forEach(c=>sel.appendChild(new Option(c,c)));}
+    async function cargarMaterialNames(selectId){const sel=document.getElementById(selectId);sel.innerHTML='';const snap=await db.collection('materiales').get();const names=[...new Set(snap.docs.map(d=>d.data().nombre))];names.forEach(n=>sel.appendChild(new Option(n,n)));return names[0];}
+    async function cargarCalibres(materialName,selectId){const sel=document.getElementById(selectId);sel.innerHTML='';const snap=await db.collection('materiales').where('nombre','==',materialName).get();snap.docs.forEach(d=>sel.appendChild(new Option(d.data().calibre,d.id)));return snap.docs[0]?.id;}
+    async function cargarPaquetes(materialId,selectId){const sel=document.getElementById(selectId);sel.innerHTML='';const snap=await db.collection('paquetes').where('materialId','==',materialId).where('estado','==','activo').get();const sorted=snap.docs.sort((a,b)=>a.data().fecha_ingreso.toMillis()-b.data().fecha_ingreso.toMillis());sorted.forEach(d=>sel.appendChild(new Option(d.data().peso_actual.toFixed(2)+' kg',d.id)));}
+    async function renderInventario(){const head=document.getElementById('header-inventario'),body=document.getElementById('body-inventario');head.innerHTML='';body.innerHTML='';const matsSnap=await db.collection('materiales').get();let maxPkgs=0;const rows=await Promise.all(matsSnap.docs.map(async m=>{const data=m.data();const pSnap=await db.collection('paquetes').where('materialId','==',m.id).where('estado','==','activo').get();const sorted=pSnap.docs.sort((a,b)=>a.data().fecha_ingreso.toMillis()-b.data().fecha_ingreso.toMillis());const pesos=sorted.map(d=>d.data().peso_actual.toFixed(2));maxPkgs=Math.max(maxPkgs,pesos.length);return{id:m.id,category:data.categoriaId||'Varios',nombre:data.nombre,calibre:data.calibre,pesos,pkgIds:sorted.map(d=>d.id)};}));rows.sort((a,b)=>a.nombre.localeCompare(b.nombre)||a.calibre.localeCompare(b.calibre));['Material','Calibre','Peso Total',...Array.from({length:maxPkgs},(_,i)=>`Paquete ${i+1}`)].forEach(t=>{const th=document.createElement('th');th.textContent=t;head.appendChild(th);});categories.forEach(cat=>{const group=rows.filter(r=>r.category===cat);if(group.length){const trCat=document.createElement('tr');trCat.className='category-row';const tdCat=document.createElement('td');tdCat.colSpan=3+maxPkgs;tdCat.textContent=cat;trCat.appendChild(tdCat);body.appendChild(trCat);group.forEach(r=>{const tr=document.createElement('tr');tr.dataset.materialId=r.id;tr.dataset.pkgIds=JSON.stringify(r.pkgIds);const total=r.pesos.reduce((s,p)=>s+parseFloat(p),0).toFixed(2);[r.nombre,r.calibre,total].forEach(txt=>{const td=document.createElement('td');td.textContent=txt;tr.appendChild(td);});r.pesos.forEach(p=>{const td=document.createElement('td');td.textContent=p;tr.appendChild(td);});for(let i=r.pesos.length;i<maxPkgs;i++)tr.appendChild(document.createElement('td'));body.appendChild(tr);});}});}    
+    function setupFormHandlers(){document.getElementById('select-material-entrada').addEventListener('change',e=>cargarCalibres(e.target.value,'select-calibre-entrada'));document.getElementById('select-material-salida').addEventListener('change',async e=>{const calId=await cargarCalibres(e.target.value,'select-calibre-salida');cargarPaquetes(calId,'select-paquete-salida');});document.getElementById('select-calibre-salida').addEventListener('change',e=>cargarPaquetes(e.target.value,'select-paquete-salida'));document.getElementById('btn-toggle-edit').addEventListener('click',async()=>{const btn=document.getElementById('btn-toggle-edit');if(btn.textContent==='Guardar'){const rows=document.querySelectorAll('#body-inventario tr:not(.category-row)');for(const tr of rows){const matId=tr.dataset.materialId;const newName=tr.children[0].textContent.trim();const newCal=tr.children[1].textContent.trim();await db.collection('materiales').doc(matId).update({nombre:newName,calibre:newCal});const pkgIds=JSON.parse(tr.dataset.pkgIds);pkgIds.forEach((pkgId,idx)=>{const cell=tr.children[3+idx];const newPeso=parseFloat(cell.textContent);db.collection('paquetes').doc(pkgId).update({peso_actual:newPeso});});}btn.textContent='Editar';document.querySelectorAll('#tabla-inventario td').forEach(td=>td.contentEditable=false);}else{btn.textContent='Guardar';document.querySelectorAll('#tabla-inventario td').forEach(td=>td.contentEditable=true);} });document.getElementById('form-nuevo-item').addEventListener('submit',async e=>{e.preventDefault();const err=document.getElementById('error-nuevo-item');err.textContent='';const nombre=document.getElementById('input-nombre').value.trim();const calibre=document.getElementById('input-calibre').value.trim();const categoria=document.getElementById('select-categoria').value;if(!nombre||!calibre){err.textContent='Nombre y calibre obligatorios.';return;}const ex=await db.collection('materiales').where('nombre','==',nombre).where('calibre','==',calibre).get();if(!ex.empty){err.textContent='Ítem ya existe.';return;}await db.collection('materiales').add({nombre,calibre,categoriaId:categoria});document.getElementById('form-nuevo-item').reset();const mFirst=await cargarMaterialNames('select-material-entrada');await cargarCalibres(mFirst,'select-calibre-entrada');const sFirst=await cargarMaterialNames('select-material-salida');await cargarCalibres(sFirst,'select-calibre-salida');renderInventario();});document.getElementById('form-entrada').addEventListener('submit',async e=>{e.preventDefault();const matId=document.getElementById('select-calibre-entrada').value;const peso=parseFloat(document.getElementById('entrada-peso').value);const pkgRef=await db.collection('paquetes').add({materialId:matId,peso_inicial:peso,peso_actual:peso,fecha_ingreso:new Date(),estado:'activo'});await db.collection('movimientos').add({tipo:'entrada',paqueteId:pkgRef.id,peso,fecha:new Date()});document.getElementById('entrada-peso').value='';renderInventario();});document.getElementById('form-salida').addEventListener('submit',async e=>{e.preventDefault();const pkgId=document.getElementById('select-paquete-salida').value;const peso=parseFloat(document.getElementById('salida-peso').value);const ref=db.collection('paquetes').doc(pkgId);const snap=await ref.get();const nuevo=snap.data().peso_actual-peso;await ref.update({peso_actual:nuevo,estado:nuevo<=0?'agotado':'activo'});await db.collection('movimientos').add({tipo:'salida',paqueteId:pkgId,peso,fecha:new Date()});e.target.reset();const sFirst=await cargarMaterialNames('select-material-salida');await cargarCalibres(sFirst,'select-calibre-salida');renderInventario();});document.getElementById('btn-generar-reportes').addEventListener('click',async()=>{const desde=new Date(document.getElementById('fecha-desde').value);const hasta=new Date(document.getElementById('fecha-hasta').value);const eAll=await db.collection('movimientos').where('tipo','==','entrada').get();const totalE=eAll.docs.filter(d=>{const f=d.data().fecha.toDate();return f>=desde&&f<=hasta;}).reduce((s,d)=>s+d.data().peso,0);const sAll=await db.collection('movimientos').where('tipo','==','salida').get();const totalS=sAll.docs.filter(d=>{const f=d.data().fecha.toDate();return f>=desde&&f<=hasta;}).reduce((s,d)=>s+d.data().peso,0);document.getElementById('total-entradas').textContent=totalE.toFixed(2);document.getElementById('total-salidas').textContent=totalS.toFixed(2);});}
+
+    (async()=>{populateCategoria();setupNav();setupFormHandlers();const firstE=await cargarMaterialNames('select-material-entrada');await cargarCalibres(firstE,'select-calibre-entrada');const firstS=await cargarMaterialNames('select-material-salida');await cargarCalibres(firstS,'select-calibre-salida');renderInventario();})();
+  </script>
+</body>
+</html>
