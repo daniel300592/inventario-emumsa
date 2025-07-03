@@ -143,8 +143,8 @@
 
     /* Table styles */
     table {
-      width: 100%;
-      border-collapse: collapse;
+      table-layout: auto;
+      width: auto;
       margin-top: 2rem;
       background: #fff;
     }
@@ -211,6 +211,12 @@
       font-weight: 700;
       font-size: 1.1rem;
     }
+    
+    #tabla-inventario th,
+    #tabla-inventario td {
+      white-space: nowrap;
+    }
+
   </style>
 </head>
 <body>
@@ -225,7 +231,7 @@
     <img
       src="logo-con-nombre-transparencia.png"
       alt="Logo"
-      style="height: 50px;"
+      style="height: 75px;"
     />
   </header>
 
@@ -318,6 +324,12 @@
       <!-- Inventario -->
       <h3>Inventario</h3>
       <table id="tabla-inventario">
+        <colgroup>
+          <col style="width: auto">
+          <col style="width: auto">
+          <col style="width: auto">
+          <col>
+        </colgroup>
         <thead>
           <tr id="inv-headers"></tr>
         </thead>
@@ -559,7 +571,7 @@
 
       ['Material', 'Calibre', 'Total',
         ...Array.from({ length: maxP },
-          (_, i) => `Pk ${i + 1}`)
+          (_, i) => `Pqt ${i + 1}`)
       ].forEach((txt) => {
         const th = document.createElement('th');
         th.textContent = txt;
