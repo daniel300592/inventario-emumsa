@@ -1,0 +1,204 @@
+    :root {
+      --primary-green: #006644;
+      --secondary-green: #009977;
+      --light-gray: #f0f0f0;
+      --dark-gray: #333;
+      --font-family: 'Roboto', sans-serif;
+      --header-height: 72px;
+      --table-head-height: 56px;
+      --category-row-height: 40px;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--font-family);
+      background: var(--light-gray);
+      color: var(--dark-gray);
+    }
+
+    /* Header */
+    .site-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--header-height);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 2rem;
+      background: linear-gradient(
+        90deg,
+        var(--primary-green),
+        var(--secondary-green)
+      );
+      z-index: 1000;
+    }
+
+    nav {
+      display: flex;
+      gap: 1rem;
+    }
+
+    nav button {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-weight: 500;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    nav button:hover,
+    nav button.active {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Layout */
+    main {
+      margin: calc(var(--header-height) + 1rem) auto 2rem;
+      max-width: 1200px;
+      padding: 0 1rem;
+    }
+
+    h2 {
+      font-size: 1.75rem;
+      margin-bottom: 1rem;
+      border-bottom: 2px solid var(--primary-green);
+      padding-bottom: 0.5rem;
+    }
+
+    .flex {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .box {
+      background: #fff;
+      border-radius: 8px;
+      padding: 1.5rem;
+      flex: 0 1 400px;
+      min-width: 280px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+    }
+
+    input,
+    select,
+    button[type="submit"] {
+      width: 100%;
+      padding: 0.6rem;
+      margin-bottom: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+
+    button[type="submit"] {
+      background: var(--primary-green);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button[type="submit"]:hover {
+      background: var(--secondary-green);
+    }
+
+    .error {
+      color: #c00;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+    }
+
+    /* Table styles */
+    table {
+      table-layout: auto;
+      width: auto;
+      margin-top: 2rem;
+      background: #fff;
+    }
+
+    thead th {
+      position: sticky;
+      top: var(--header-height);
+      height: var(--table-head-height);
+      background: var(--primary-green);
+      color: #fff;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      z-index: 3;
+    }
+
+    th,
+    td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+    }
+
+    tbody tr:nth-child(even) {
+      background: var(--light-gray);
+    }
+
+    .category-row td {
+      position: sticky;
+      top:
+        calc(
+          var(--header-height) +
+          var(--table-head-height)
+        );
+      background: #c8e6c9;
+      font-weight: bold;
+      height: var(--category-row-height);
+      z-index: 2;
+    }
+
+    tbody tr:hover {
+      background: rgba(255, 0, 0, 0.1);
+    }
+
+    tbody td:nth-child(1),
+    tbody td:nth-child(2),
+    tbody td:nth-child(3) {
+      font-weight: 700;
+    }
+
+    /* Dynamic weight fields */
+    #pesos-entrada-container,
+    #pesos-nuevo-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #pesos-entrada-container label,
+    #pesos-nuevo-container label {
+      width: 200px;
+    }
+
+    #total-general {
+      margin-top: 1rem;
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+    
+    #tabla-inventario th,
+    #tabla-inventario td {
+      white-space: nowrap;
+    }
