@@ -608,6 +608,31 @@
         renderInventario();
       });
 
+    /* Reportes: filtrar movimientos por fecha y calcular totales */
+    document.getElementById('btn-reporte').addEventListener('click', async (e) => {
+      e.preventDefault();
+      const desde = new Date(document.getElementById('fecha-desde').value);
+      const hasta = new Date(document.getElementById('fecha-hasta').value);
+      hasta.setHours(23, 59, 59);
+      
+      const entradasSnap = await db.collection('movimientos')
+        .where('tipo', '==', 'entrada')
+        .where('fecha', '>=', desde)
+        .where('fecha', '<=', hasta)
+        .get();
+      const totalEntradas = entradasSnap.docs.reduce((sum, d) => sum + d.data().peso, 0);
+      
+      const salidasSnap = await db.collection('movimientos')
+        .where('tipo', '==', 'salida')
+        .where('fecha', '>=', desde)
+        .where('fecha', '<=', hasta)
+        .get();
+      const totalSalidas = salidasSnap.docs.reduce((sum, d) => sum + d.data().peso, 0);
+      
+      document.getElementById('total-entradas').textContent = totalEntradas.toFixed(2);
+      document.getElementById('total-salidas').textContent = totalSalidas.toFixed(2);
+    });
+
     /* Initialize */
     (async () => {
       setupNav();
