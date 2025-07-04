@@ -4,149 +4,270 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gestión de Inventario de Acero</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
-  <link rel="stylesheet" href="./assets/styles.css">
+
+  <!-- SheetJS for Excel export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- Google Fonts -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="./assets/styles.css" />
 </head>
+
 <body>
+  <!-- Header -->
   <header class="site-header">
     <nav>
       <button data-target="movimientos" class="active">Movimientos</button>
       <button data-target="nuevo-item">Nuevo Ítem</button>
       <button data-target="reportes">Reportes</button>
     </nav>
-    <img src="./assets/logo-con-nombre-transparencia.png" alt="Logo" style="height:75px;">
+    <img
+      src="./assets/logo-con-nombre-transparencia.png"
+      alt="Logo"
+      style="height:75px;"
+    />
   </header>
 
+  <!-- Main Content -->
   <main>
+    <!-- Sección Movimientos -->
     <section id="movimientos" class="active">
       <h2>Movimientos de Material</h2>
       <div class="flex">
+        <!-- Entrada de Material -->
         <div class="box">
           <h3>Entrada de Material</h3>
           <form id="form-entrada">
-            <label>Material<br>
-              <input list="datalist-entrada" id="entrada-material" required>
+            <label>
+              Material<br />
+              <input
+                list="datalist-entrada"
+                id="entrada-material"
+                required
+              />
               <datalist id="datalist-entrada"></datalist>
             </label>
             <div id="error-entrada-material" class="error"></div>
-            <label>Calibre<br>
+
+            <label>
+              Calibre<br />
               <select id="entrada-calibre">
                 <option disabled selected>Seleccione calibre</option>
               </select>
             </label>
+
             <div id="pesos-entrada-container">
-              <label>Peso (kg)<br>
-                <input type="number" step="0.01" class="entrada-peso" required>
+              <label>
+                Peso (kg)<br />
+                <input
+                  type="number"
+                  step="0.01"
+                  class="entrada-peso"
+                  required
+                />
               </label>
             </div>
+
             <button type="submit">Registrar Paquetes</button>
           </form>
         </div>
+
+        <!-- Salida de Material -->
         <div class="box">
           <h3>Salida de Material</h3>
           <form id="form-salida">
-            <label>Material<br>
-              <input list="datalist-salida" id="salida-material" required>
+            <label>
+              Material<br />
+              <input
+                list="datalist-salida"
+                id="salida-material"
+                required
+              />
               <datalist id="datalist-salida"></datalist>
             </label>
             <div id="error-salida-material" class="error"></div>
-            <label>Calibre<br>
+
+            <label>
+              Calibre<br />
               <select id="salida-calibre">
                 <option disabled selected>Seleccione calibre</option>
               </select>
             </label>
-            <label>Paquete<br>
+
+            <label>
+              Paquete<br />
               <select id="salida-paquete">
                 <option disabled selected>Seleccione paquete</option>
               </select>
             </label>
-            <label>Peso a descontar (kg)<br>
-              <input type="number" step="0.01" id="salida-peso" required>
+
+            <label>
+              Peso a descontar (kg)<br />
+              <input
+                type="number"
+                step="0.01"
+                id="salida-peso"
+                required
+              />
             </label>
+
             <button type="submit">Registrar Salida</button>
           </form>
         </div>
       </div>
 
+      <!-- Inventario Dinámico -->
       <h3>Inventario</h3>
       <table id="tabla-inventario">
         <colgroup>
-          <col style="width:auto">
-          <col style="width:auto">
-          <col style="width:auto">
-          <col>
+          <col style="width:auto" />
+          <col style="width:auto" />
+          <col style="width:auto" />
+          <col />
         </colgroup>
         <thead>
           <tr id="inv-headers"></tr>
         </thead>
         <tbody id="inv-body"></tbody>
       </table>
-      <div id="total-general">TOTAL GENERAL: <span id="sum-general">0.00</span> kg</div>
+      <div id="total-general">
+        TOTAL GENERAL: <span id="sum-general">0.00</span> kg
+      </div>
     </section>
 
+    <!-- Sección Nuevo Ítem -->
     <section id="nuevo-item">
       <h2>Alta de Nuevo Ítem</h2>
       <div class="box">
         <form id="form-nuevo-item">
-          <label>Nombre<br>
-            <input type="text" id="nuevo-nombre" required>
+          <label>
+            Nombre<br />
+            <input
+              type="text"
+              id="nuevo-nombre"
+              required
+            />
           </label>
-          <label>Calibre<br>
-            <input type="text" id="nuevo-calibre" required>
+
+          <label>
+            Calibre<br />
+            <input
+              type="text"
+              id="nuevo-calibre"
+              required
+            />
           </label>
-          <label>Categoría<br>
+
+          <label>
+            Categoría<br />
             <select id="nuevo-categoria"></select>
           </label>
+
           <div id="pesos-nuevo-container">
-            <label>Peso paquete (kg)<br>
-              <input type="number" step="0.01" class="nuevo-peso">
+            <label>
+              Peso paquete (kg)<br />
+              <input
+                type="number"
+                step="0.01"
+                class="nuevo-peso"
+              />
             </label>
           </div>
+
           <button type="submit">Agregar Ítem</button>
           <div id="error-nuevo-item" class="error"></div>
         </form>
       </div>
     </section>
 
+    <!-- Sección Reportes -->
     <section id="reportes">
       <h2>Reportes</h2>
       <div class="box">
-        <label>Desde<br>
-          <input type="date" id="fecha-desde">
+        <label>
+          Desde<br />
+          <input
+            type="date"
+            id="fecha-desde"
+          />
         </label>
-        <label>Hasta<br>
-          <input type="date" id="fecha-hasta">
+
+        <label>
+          Hasta<br />
+          <input
+            type="date"
+            id="fecha-hasta"
+          />
         </label>
-        <button type="button" id="btn-reporte">Generar</button>
+
+        <button
+          type="button"
+          id="btn-reporte"
+        >
+          Generar
+        </button>
+
+        <button
+          type="button"
+          id="btn-exportar"
+        >
+          Descargar Excel
+        </button>
       </div>
+
       <div class="box">
         <h3>Entradas por Material</h3>
         <table id="report-entradas">
-          <thead><tr><th>Material</th><th>Peso Total (kg)</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Material</th>
+              <th>Peso Total (kg)</th>
+            </tr>
+          </thead>
           <tbody></tbody>
         </table>
+
         <h3>Salidas por Material</h3>
         <table id="report-salidas">
-          <thead><tr><th>Material</th><th>Peso Total (kg)</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Material</th>
+              <th>Peso Total (kg)</th>
+            </tr>
+          </thead>
           <tbody></tbody>
         </table>
+
         <div id="totales-report">
-          Total Entradas: <span id="sum-report-entradas">0.00</span> kg |
-          Total Salidas: <span id="sum-report-salidas">0.00</span> kg
+          Total Entradas:
+          <span id="sum-report-entradas">0.00</span> kg |
+          Total Salidas:
+          <span id="sum-report-salidas">0.00</span> kg
         </div>
       </div>
     </section>
   </main>
 
+  <!-- Scripts -->
   <script>
+    // Firebase initialization
     firebase.initializeApp({
       apiKey: 'AIzaSyCgDCzu5_k2_k1fb3vghS7MrZez87n8qjg',
       authDomain: 'inventario-emumsa.firebaseapp.com',
       projectId: 'inventario-emumsa'
     });
     const db = firebase.firestore();
+
+    // Categorías y nombres
     const categories = [
       'Tubería de Diámetro Menor',
       'Tubería de Diámetro Mayor',
@@ -159,6 +280,7 @@
     ];
     let materialNames = [];
 
+    // Navegación fija y scroll
     function setupNav() {
       document.querySelectorAll('nav button').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -173,6 +295,7 @@
       });
     }
 
+    // Carga de materiales en datalist
     async function loadMaterialNames() {
       const snap = await db.collection('materiales').get();
       materialNames = [...new Set(snap.docs.map(d => d.data().nombre))].sort();
@@ -183,16 +306,20 @@
       });
     }
 
+    // Dropdown de categorías
     function populateCategorias() {
       const sel = document.getElementById('nuevo-categoria');
       sel.innerHTML = '';
       categories.forEach(c => sel.appendChild(new Option(c, c)));
     }
 
+    // Cargas dinámicas de calibres y paquetes
     async function cargarCalibres(nombre, selId) {
       const sel = document.getElementById(selId);
       sel.innerHTML = '<option disabled selected>Seleccione calibre</option>';
-      const snap = await db.collection('materiales').where('nombre', '==', nombre).get();
+      const snap = await db.collection('materiales')
+        .where('nombre', '==', nombre)
+        .get();
       snap.docs.forEach(d => sel.appendChild(new Option(d.data().calibre, d.id)));
     }
 
@@ -203,11 +330,13 @@
         .where('materialId', '==', calId)
         .where('estado', '==', 'activo')
         .get();
-      snap.docs.map(d => ({id: d.id, ...d.data()}))
+      snap.docs
+        .map(d => ({id: d.id, ...d.data()}))
         .sort((a, b) => a.fecha_ingreso.toDate() - b.fecha_ingreso.toDate())
         .forEach(p => sel.appendChild(new Option(p.peso_actual.toFixed(2) + ' kg', p.id)));
     }
 
+    // Render Inventario
     async function renderInventario() {
       const head = document.getElementById('inv-headers');
       const body = document.getElementById('inv-body');
@@ -215,9 +344,10 @@
       body.innerHTML = '';
 
       let sumGeneral = 0;
-
       const mats = await db.collection('materiales').get();
-      const pkgsSnap = await db.collection('paquetes').where('estado', '==', 'activo').get();
+      const pkgsSnap = await db.collection('paquetes')
+        .where('estado', '==', 'activo')
+        .get();
       const map = {};
 
       pkgsSnap.docs.forEach(d => {
@@ -232,7 +362,7 @@
         const list = (map[m.id] || []).sort((a,b) => a.fecha - b.fecha);
         const pesos = list.map(x => x.peso.toFixed(2));
         maxP = Math.max(maxP, pesos.length);
-        return { categoria: D.categoriaId || 'Varios', nombre: D.nombre, calibre: D.calibre, pesos };
+        return {categoria: D.categoriaId || 'Varios', nombre: D.nombre, calibre: D.calibre, pesos};
       }).sort((a,b) => a.nombre.localeCompare(b.nombre) || a.calibre.localeCompare(b.calibre));
 
       ['Material', 'Calibre', 'Total']
@@ -246,6 +376,7 @@
       categories.forEach(cat => {
         const grp = rows.filter(r => r.categoria === cat);
         if (!grp.length) return;
+
         const trC = document.createElement('tr');
         trC.classList.add('category-row');
         const tdC = document.createElement('td');
@@ -261,11 +392,15 @@
           const totalStr = total.toFixed(2);
 
           [r.nombre, r.calibre, totalStr].forEach(txt => {
-            const td = document.createElement('td'); td.textContent = txt; tr.appendChild(td);
+            const td = document.createElement('td');
+            td.textContent = txt;
+            tr.appendChild(td);
           });
 
           r.pesos.forEach(p => {
-            const td = document.createElement('td'); td.textContent = p; tr.appendChild(td);
+            const td = document.createElement('td');
+            td.textContent = p;
+            tr.appendChild(td);
           });
 
           for (let i = r.pesos.length; i < maxP; i++) {
@@ -278,104 +413,268 @@
       document.getElementById('sum-general').textContent = sumGeneral.toFixed(2);
     }
 
-    document.getElementById('entrada-material').addEventListener('change', e => cargarCalibres(e.target.value, 'entrada-calibre'));
-    document.getElementById('entrada-calibre').addEventListener('change', () => {
-      document.getElementById('pesos-entrada-container').innerHTML =
-        '<label>Peso (kg)<br><input type="number" step="0.01" class="entrada-peso" required></label>';
-    });
-    document.getElementById('pesos-entrada-container').addEventListener('input', e => {
-      if (e.target.classList.contains('entrada-peso')) {
-        const last = [...document.querySelectorAll('.entrada-peso')].pop();
-        if (last.value) {
-          const lbl = document.createElement('label'); lbl.innerHTML = 'Peso (kg)<br>';
-          const ip = document.createElement('input'); ip.type = 'number'; ip.step = '0.01'; ip.className = 'entrada-peso'; ip.required = false;
-          lbl.appendChild(ip); document.getElementById('pesos-entrada-container').appendChild(lbl);
+    // Eventos Entrada
+    document.getElementById('entrada-material')
+      .addEventListener('change', e => cargarCalibres(e.target.value, 'entrada-calibre'));
+
+    document.getElementById('entrada-calibre')
+      .addEventListener('change', () => {
+        document.getElementById('pesos-entrada-container').innerHTML =
+          '<label>Peso (kg)<br><input type="number" step="0.01" class="entrada-peso" required></label>';
+      });
+
+    document.getElementById('pesos-entrada-container')
+      .addEventListener('input', e => {
+        if (e.target.classList.contains('entrada-peso')) {
+          const last = [...document.querySelectorAll('.entrada-peso')].pop();
+          if (last.value) {
+            const lbl = document.createElement('label');
+            lbl.innerHTML = 'Peso (kg)<br>';
+            const ip = document.createElement('input');
+            ip.type = 'number';
+            ip.step = '0.01';
+            ip.className = 'entrada-peso';
+            ip.required = false;
+            lbl.appendChild(ip);
+            document
+              .getElementById('pesos-entrada-container')
+              .appendChild(lbl);
+          }
         }
-      }
-    });
-    document.getElementById('form-entrada').addEventListener('submit', async e => {
-      e.preventDefault();
-      const cal = document.getElementById('entrada-calibre').value;
-      const pesos = [...document.querySelectorAll('.entrada-peso')].map(i => parseFloat(i.value)).filter(v => v);
-      for (const p of pesos) {
-        const paqueteRef = await db.collection('paquetes').add({materialId: cal, peso_inicial: p, peso_actual: p, fecha_ingreso: new Date(), estado: 'activo'});
-        await db.collection('movimientos').add({tipo: 'entrada', fecha: new Date(), peso: p, materialId: cal, paqueteId: paqueteRef.id});
-      }
-      e.target.reset();
-      document.getElementById('pesos-entrada-container').innerHTML =
-        '<label>Peso (kg)<br><input type="number" step="0.01" class="entrada-peso" required></label>';
-      renderInventario();
-    });
+      });
 
-    document.getElementById('salida-material').addEventListener('change', e => cargarCalibres(e.target.value, 'salida-calibre'));
-    document.getElementById('salida-calibre').addEventListener('change', e => cargarPaquetes(e.target.value, 'salida-paquete'));
-    document.getElementById('form-salida').addEventListener('submit', async e => {
-      e.preventDefault();
-      const cal = document.getElementById('salida-calibre').value;
-      const pkg = document.getElementById('salida-paquete').value;
-      const p = parseFloat(document.getElementById('salida-peso').value);
-      const ref = db.collection('paquetes').doc(pkg);
-      const snap = await ref.get();
-      const newP = snap.data().peso_actual - p;
-      await ref.update({peso_actual: newP, estado: newP <= 0 ? 'agotado' : 'activo'});
-      await db.collection('movimientos').add({tipo: 'salida', fecha: new Date(), peso: p, materialId: cal, paqueteId: pkg});
-      e.target.reset();
-      renderInventario();
-    });
+    document.getElementById('form-entrada')
+      .addEventListener('submit', async e => {
+        e.preventDefault();
+        const cal = document.getElementById('entrada-calibre').value;
+        const pesos = [...document.querySelectorAll('.entrada-peso')]
+          .map(i => parseFloat(i.value))
+          .filter(v => v);
 
-    document.getElementById('pesos-nuevo-container').addEventListener('input', e => {
-      if (e.target.classList.contains('nuevo-peso')) {
-        const last = [...document.querySelectorAll('.nuevo-peso')].pop();
-        if (last.value) {
-          const lbl = document.createElement('label'); lbl.innerHTML = 'Peso paquete (kg)<br>';
-          const ip = document.createElement('input'); ip.type = 'number'; ip.step = '0.01'; ip.className = 'nuevo-peso'; ip.required = false;
-          lbl.appendChild(ip); document.getElementById('pesos-nuevo-container').appendChild(lbl);
+        for (const p of pesos) {
+          const paqueteRef =
+            await db.collection('paquetes').add({
+              materialId: cal,
+              peso_inicial: p,
+              peso_actual: p,
+              fecha_ingreso: new Date(),
+              estado: 'activo'
+            });
+
+          await db.collection('movimientos').add({
+            tipo: 'entrada',
+            fecha: new Date(),
+            peso: p,
+            materialId: cal,
+            paqueteId: paqueteRef.id
+          });
         }
-      }
-    });
-    document.getElementById('form-nuevo-item').addEventListener('submit', async e => {
-      e.preventDefault();
-      const n = document.getElementById('nuevo-nombre').value.trim();
-      const cl = document.getElementById('nuevo-calibre').value.trim();
-      const cat = document.getElementById('nuevo-categoria').value;
-      const err = document.getElementById('error-nuevo-item'); err.textContent = '';
-      if (!n || !cl) { err.textContent = 'Nombre y calibre obligatorios'; return; }
-      const ex = await db.collection('materiales').where('nombre','==',n).where('calibre','==',cl).get();
-      if (!ex.empty) { err.textContent = 'Ítem ya existe'; return; }
-      const docRef = await db.collection('materiales').add({nombre: n, calibre: cl, categoriaId: cat});
-      const nuevos = [...document.querySelectorAll('.nuevo-peso')].map(i => parseFloat(i.value)).filter(v => v);
-      for (const p of nuevos) {
-        const paqRef = await db.collection('paquetes').add({materialId: docRef.id, peso_inicial: p, peso_actual: p, fecha_ingreso: new Date(), estado: 'activo'});
-        await db.collection('movimientos').add({tipo: 'entrada', fecha: new Date(), peso: p, materialId: docRef.id, paqueteId: paqRef.id});
-      }
-      e.target.reset();
-      document.getElementById('pesos-nuevo-container').innerHTML = '<label>Peso paquete (kg)<br><input type="number" step="0.01" class="nuevo-peso"></label>';
-      await loadMaterialNames();
-      renderInventario();
-    });
 
+        e.target.reset();
+        document.getElementById('pesos-entrada-container').innerHTML =
+          '<label>Peso (kg)<br><input type="number" step="0.01" class="entrada-peso" required></label>';
+
+        renderInventario();
+      });
+
+    // Eventos Salida
+    document.getElementById('salida-material')
+      .addEventListener('change', e => cargarCalibres(e.target.value, 'salida-calibre'));
+
+    document.getElementById('salida-calibre')
+      .addEventListener('change', e => cargarPaquetes(e.target.value, 'salida-paquete'));
+
+    document.getElementById('form-salida')
+      .addEventListener('submit', async e => {
+        e.preventDefault();
+        const cal = document.getElementById('salida-calibre').value;
+        const pkg = document.getElementById('salida-paquete').value;
+        const p = parseFloat(
+          document.getElementById('salida-peso').value
+        );
+
+        const ref = db.collection('paquetes').doc(pkg);
+        const snap = await ref.get();
+        const newP = snap.data().peso_actual - p;
+
+        await ref.update({
+          peso_actual: newP,
+          estado: newP <= 0 ? 'agotado' : 'activo'
+        });
+
+        await db.collection('movimientos').add({
+          tipo: 'salida',
+          fecha: new Date(),
+          peso: p,
+          materialId: cal,
+          paqueteId: pkg
+        });
+
+        e.target.reset();
+        renderInventario();
+      });
+
+    // Nuevo Ítem con paquetes opcionales
+    document.getElementById('pesos-nuevo-container')
+      .addEventListener('input', e => {
+        if (e.target.classList.contains('nuevo-peso')) {
+          const last = [...document.querySelectorAll('.nuevo-peso')].pop();
+          if (last.value) {
+            const lbl = document.createElement('label');
+            lbl.innerHTML = 'Peso paquete (kg)<br>';
+            const ip = document.createElement('input');
+            ip.type = 'number';
+            ip.step = '0.01';
+            ip.className = 'nuevo-peso';
+            ip.required = false;
+            lbl.appendChild(ip);
+            document
+              .getElementById('pesos-nuevo-container')
+              .appendChild(lbl);
+          }
+        }
+      });
+
+    document.getElementById('form-nuevo-item')
+      .addEventListener('submit', async e => {
+        e.preventDefault();
+        const n = document
+          .getElementById('nuevo-nombre')
+          .value
+          .trim();
+        const cl = document
+          .getElementById('nuevo-calibre')
+          .value
+          .trim();
+        const cat = document.getElementById('nuevo-categoria').value;
+        const err = document.getElementById('error-nuevo-item');
+        err.textContent = '';
+
+        if (!n || !cl) {
+          err.textContent = 'Nombre y calibre obligatorios';
+          return;
+        }
+
+        const ex = await db.collection('materiales')
+          .where('nombre','==',n)
+          .where('calibre','==',cl)
+          .get();
+        if (!ex.empty) {
+          err.textContent = 'Ítem ya existe';
+          return;}
+
+        const docRef =
+          await db.collection('materiales').add({
+            nombre: n,
+            calibre: cl,
+            categoriaId: cat
+          });
+
+        const nuevos = [...document.querySelectorAll('.nuevo-peso')]
+          .map(i => parseFloat(i.value))
+          .filter(v => v);
+
+        for (const p of nuevos) {
+          const paqRef =
+            await db.collection('paquetes').add({
+              materialId: docRef.id,
+              peso_inicial: p,
+              peso_actual: p,
+              fecha_ingreso: new Date(),
+              estado: 'activo'
+            });
+
+          await db.collection('movimientos').add({
+            tipo: 'entrada',
+            fecha: new Date(),
+            peso: p,
+            materialId: docRef.id,
+            paqueteId: paqRef.id
+          });
+        }
+
+        e.target.reset();
+        document.getElementById('pesos-nuevo-container').innerHTML =
+          '<label>Peso paquete (kg><br><input type="number" step="0.01" class="nuevo-peso"></label>';
+        await loadMaterialNames();
+        renderInventario();
+      });
+
+    // Reportes y Exportar Excel
     document.getElementById('btn-reporte').addEventListener('click', async () => {
       const desde = new Date(document.getElementById('fecha-desde').value);
-      const hasta = new Date(document.getElementById('fecha-hasta').value); hasta.setHours(23,59,59);
-      const matsSnap = await db.collection('materiales').get();
-      const matMap = {}; matsSnap.docs.forEach(d => { matMap[d.id] = d.data().nombre });
+      const hasta = new Date(document.getElementById('fecha-hasta').value);
+      hasta.setHours(23,59,59);
 
-      const entradasSnap = await db.collection('movimientos').where('tipo','==','entrada').where('fecha','>=',desde).where('fecha','<=',hasta).get();
+      const matsSnap = await db.collection('materiales').get();
+      const matMap = {};
+      matsSnap.docs.forEach(d => { matMap[d.id] = d.data().nombre });
+
+      // Entradas
+      const entradasSnap = await db.collection('movimientos')
+        .where('tipo','==','entrada')
+        .where('fecha','>=',desde)
+        .where('fecha','<=',hasta)
+        .get();
       const grpEnt = {}; let sumEnt = 0;
-      entradasSnap.docs.forEach(d => { const data = d.data(); const mid = data.materialId; grpEnt[mid] = (grpEnt[mid]||0) + data.peso; sumEnt += data.peso; });
-      const reportEnt = document.getElementById('report-entradas').querySelector('tbody'); reportEnt.innerHTML = '';
-      Object.keys(grpEnt).forEach(id => { const tr = document.createElement('tr'); tr.innerHTML = '<td>' + (matMap[id]||id) + '</td><td>' + grpEnt[id].toFixed(2) + '</td>'; reportEnt.appendChild(tr); });
+      entradasSnap.docs.forEach(d => {
+        const data = d.data();
+        grpEnt[data.materialId] = (grpEnt[data.materialId] || 0) + data.peso;
+        sumEnt += data.peso;
+      });
+      const reportEnt =
+        document.getElementById('report-entradas').querySelector('tbody');
+      reportEnt.innerHTML = '';
+      Object.keys(grpEnt).forEach(id => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td>' + (matMap[id]||id) + '</td><td>' + grpEnt[id].toFixed(2) + '</td>';
+        reportEnt.appendChild(tr);
+      });
       document.getElementById('sum-report-entradas').textContent = sumEnt.toFixed(2);
 
-      const salidasSnap = await db.collection('movimientos').where('tipo','==','salida').where('fecha','>=',desde).where('fecha','<=',hasta).get();
+      // Salidas
+      const salidasSnap = await db.collection('movimientos')
+        .where('tipo','==','salida')
+        .where('fecha','>=',desde)
+        .where('fecha','<=',hasta)
+        .get();
       const grpSal = {}; let sumSal = 0;
-      salidasSnap.docs.forEach(d => { const data = d.data(); const mid = data.materialId; grpSal[mid] = (grpSal[mid]||0) + data.peso; sumSal += data.peso; });
-      const reportSal = document.getElementById('report-salidas').querySelector('tbody'); reportSal.innerHTML = '';
-      Object.keys(grpSal).forEach(id => { const tr = document.createElement('tr'); tr.innerHTML = '<td>' + (matMap[id]||id) + '</td><td>' + grpSal[id].toFixed(2) + '</td>'; reportSal.appendChild(tr); });
+      salidasSnap.docs.forEach(d => {
+        const data = d.data();
+        grpSal[data.materialId] = (grpSal[data.materialId]||0) + data.peso;
+        sumSal += data.peso;
+      });
+      const reportSal =
+        document.getElementById('report-salidas').querySelector('tbody');
+      reportSal.innerHTML = '';
+      Object.keys(grpSal).forEach(id => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td>' + (matMap[id]||id) + '</td><td>' + grpSal[id].toFixed(2) + '</td>';
+        reportSal.appendChild(tr);
+      });
       document.getElementById('sum-report-salidas').textContent = sumSal.toFixed(2);
     });
 
-    (async () => { setupNav(); populateCategorias(); await loadMaterialNames(); renderInventario(); })();
+    document.getElementById('btn-exportar').addEventListener('click', () => {
+      const wb = XLSX.utils.book_new();
+      const wsEnt = XLSX.utils.table_to_sheet(
+        document.getElementById('report-entradas')
+      );
+      XLSX.utils.book_append_sheet(wb, wsEnt, 'Entradas');
+      const wsSal = XLSX.utils.table_to_sheet(
+        document.getElementById('report-salidas')
+      );
+      XLSX.utils.book_append_sheet(wb, wsSal, 'Salidas');
+      XLSX.writeFile(wb, 'reporte_inventario.xlsx');
+    });
+
+    // Inicialización
+    (async () => {
+      setupNav();
+      populateCategorias();
+      await loadMaterialNames();
+      renderInventario();
+    })();
   </script>
 </body>
 </html>
