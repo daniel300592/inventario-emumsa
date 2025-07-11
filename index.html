@@ -23,6 +23,7 @@
 </head>
 
 <body>
+  <div id="mensaje-guardado" style="display:none;position:fixed;top:10px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 30px;border-radius:6px;z-index:1000;font-size:1.1em;"></div>
   <!-- Header -->
   <header class="site-header">
     <nav>
@@ -32,9 +33,9 @@
     </nav>
     <img
     class="logo"  
-    src="./assets\logo-con-nombre-transparencia-contorno-blanco-01.png"
+    src="./assets\logo-con-nombre-transparencia-contorno-blanco-02.png"
       alt="Logo"
-      style="height:75px;"
+      style="height: 75px;"
     />
   </header>
 
@@ -269,6 +270,8 @@
     });
     const db = firebase.firestore();
 
+    let inventarioEditMode = false;
+
     // Categorías y nombres
     const categories = [
       'Tubería de Diámetro Menor',
@@ -339,9 +342,25 @@
     }
 
     // Render Inventario
-    let inventarioEditMode = false;
 
-    document.getElementById('btn-editar-inventario').addEventListener('click', function() {
+
+    document.getElementById('btn-editar-inventario').addEventListener('click', async function() {
+      const mensaje = document.getElementById('mensaje-guardado');
+      if (inventarioEditMode) {
+        mensaje.textContent = 'Guardando cambios...';
+        mensaje.style.display = 'block';
+        await guardarCambiosInventario();
+        inventarioEditMode = !inventarioEditMode;
+        this.textContent = inventarioEditMode ? 'Salir de Edición' : 'Editar Inventario';
+        renderInventario();
+        // Espera un poco para asegurar que el DOM se actualizó
+        setTimeout(() => {
+          mensaje.textContent = '¡Cambios guardados!';
+          mensaje.style.display = 'block';
+          setTimeout(() => { mensaje.style.display = 'none'; }, 1500);
+        }, 100);
+        return;
+      }
       inventarioEditMode = !inventarioEditMode;
       this.textContent = inventarioEditMode ? 'Salir de Edición' : 'Editar Inventario';
       renderInventario();
@@ -483,11 +502,6 @@
 
       document.getElementById('sum-general').textContent = sumGeneral.toFixed(2);
 
-      // Guardar cambios al salir de edición
-      if (!inventarioEditMode && window._wasEditing) {
-        guardarCambiosInventario();
-      }
-      window._wasEditing = inventarioEditMode;
     }
 
     // Guardar cambios en Firestore
@@ -514,7 +528,7 @@
           }
         }
       }
-      renderInventario();
+      //renderInventario();
     }
 
     // Eventos Entrada
