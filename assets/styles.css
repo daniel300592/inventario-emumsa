@@ -1,10 +1,10 @@
     :root {
-      --primary-green: #006644;
-      --secondary-green: #009977;
+      --primary-green: #04422a;
+      --secondary-green: #007731;
       --light-gray: #f0f0f0;
       --dark-gray: #333;
       --font-family: 'Roboto', sans-serif;
-      --header-height: 72px;
+      --header-height: 100px;
       --table-head-height: 56px;
       --category-row-height: 40px;
     }
