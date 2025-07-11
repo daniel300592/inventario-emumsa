@@ -23,7 +23,7 @@
 </head>
 
 <body>
-  <div id="mensaje-guardado" style="display:none;position:fixed;top:10px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 30px;border-radius:6px;z-index:1000;font-size:1.1em;"></div>
+  <div id="mensaje-guardado"></div>
   <!-- Header -->
   <header class="site-header">
     <nav>
@@ -346,23 +346,36 @@
 
     document.getElementById('btn-editar-inventario').addEventListener('click', async function() {
       const mensaje = document.getElementById('mensaje-guardado');
+      
       if (inventarioEditMode) {
+        // Mostrar mensaje de "Guardando..."
         mensaje.textContent = 'Guardando cambios...';
-        mensaje.style.display = 'block';
+        mensaje.classList.add('mostrar');
+        
+        // Guardar cambios
         await guardarCambiosInventario();
-        inventarioEditMode = !inventarioEditMode;
-        this.textContent = inventarioEditMode ? 'Salir de Edición' : 'Editar Inventario';
-        renderInventario();
-        // Espera un poco para asegurar que el DOM se actualizó
+        
+        // Cambiar modo
+        inventarioEditMode = false;
+        this.textContent = 'Editar Inventario';
+        
+        // Renderizar tabla
+        await renderInventario();
+        
+        // Mostrar mensaje de "Guardado"
+        mensaje.textContent = '¡Cambios guardados!';
+        
+        // Ocultar mensaje después de 1.5 segundos
         setTimeout(() => {
-          mensaje.textContent = '¡Cambios guardados!';
-          mensaje.style.display = 'block';
-          setTimeout(() => { mensaje.style.display = 'none'; }, 1500);
-        }, 100);
+          mensaje.classList.remove('mostrar');
+        }, 1500);
+        
         return;
       }
-      inventarioEditMode = !inventarioEditMode;
-      this.textContent = inventarioEditMode ? 'Salir de Edición' : 'Editar Inventario';
+      
+      // Entrar en modo edición
+      inventarioEditMode = true;
+      this.textContent = 'Salir de Edición';
       renderInventario();
     });
 
@@ -528,7 +541,6 @@
           }
         }
       }
-      //renderInventario();
     }
 
     // Eventos Entrada
