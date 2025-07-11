@@ -202,3 +202,19 @@
     #tabla-inventario td {
       white-space: nowrap;
     }
+
+    #mensaje-guardado {
+  display: none;
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #222;
+  color: #fff;
+  padding: 10px 30px;
+  border-radius: 6px;
+  z-index: 9999 !important;
+  font-size: 1.1em;
+  box-shadow: 0 2px 12px #0006;
+  pointer-events: none;
+}
