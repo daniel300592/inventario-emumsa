@@ -127,6 +127,7 @@
 
       <!-- Inventario Dinámico -->
       <h3>Inventario</h3>
+      <button id="btn-editar-inventario" type="button">Editar Inventario</button>
       <table id="tabla-inventario">
         <colgroup>
           <col style="width:auto" />
@@ -337,6 +338,14 @@
     }
 
     // Render Inventario
+    let inventarioEditMode = false;
+
+    document.getElementById('btn-editar-inventario').addEventListener('click', function() {
+      inventarioEditMode = !inventarioEditMode;
+      this.textContent = inventarioEditMode ? 'Salir de Edición' : 'Editar Inventario';
+      renderInventario();
+    });
+
     async function renderInventario() {
       const head = document.getElementById('inv-headers');
       const body = document.getElementById('inv-body');
@@ -353,20 +362,22 @@
       pkgsSnap.docs.forEach(d => {
         const D = d.data();
         map[D.materialId] = map[D.materialId] || [];
-        map[D.materialId].push({peso: D.peso_actual, fecha: D.fecha_ingreso.toDate()});
+        map[D.materialId].push({peso: D.peso_actual, fecha: D.fecha_ingreso.toDate(), id: d.id});
       });
 
       let maxP = 0;
       const rows = mats.docs.map(m => {
         const D = m.data();
         const list = (map[m.id] || []).sort((a,b) => a.fecha - b.fecha);
-        const pesos = list.map(x => x.peso.toFixed(2));
+        const pesos = list.map(x => ({peso: x.peso.toFixed(2), id: x.id}));
         maxP = Math.max(maxP, pesos.length);
-        return {categoria: D.categoriaId || 'Varios', nombre: D.nombre, calibre: D.calibre, pesos};
+        return {id: m.id, categoria: D.categoriaId || 'Varios', nombre: D.nombre, calibre: D.calibre, pesos};
       }).sort((a,b) => a.nombre.localeCompare(b.nombre) || a.calibre.localeCompare(b.calibre));
 
+      // Encabezados
       ['Material', 'Calibre', 'Total']
         .concat(Array.from({length: maxP}, (_,i) => 'Pqt ' + (i+1)))
+        .concat(inventarioEditMode ? [''] : [])
         .forEach(txt => {
           const th = document.createElement('th');
           th.textContent = txt;
@@ -380,37 +391,129 @@
         const trC = document.createElement('tr');
         trC.classList.add('category-row');
         const tdC = document.createElement('td');
-        tdC.colSpan = 3 + maxP;
+        tdC.colSpan = 3 + maxP + (inventarioEditMode ? 1 : 0);
         tdC.textContent = cat;
         trC.appendChild(tdC);
         body.appendChild(trC);
 
         grp.forEach(r => {
           const tr = document.createElement('tr');
-          const total = r.pesos.reduce((s,p) => s + parseFloat(p), 0);
+          tr.dataset.materialId = r.id;
+
+          // Material y calibre editables
+          let nombreTd, calibreTd;
+          if (inventarioEditMode) {
+            nombreTd = document.createElement('td');
+            const nombreInput = document.createElement('input');
+            nombreInput.type = 'text';
+            nombreInput.value = r.nombre;
+            nombreInput.className = 'edit-material-nombre';
+            nombreTd.appendChild(nombreInput);
+
+            calibreTd = document.createElement('td');
+            const calibreInput = document.createElement('input');
+            calibreInput.type = 'text';
+            calibreInput.value = r.calibre;
+            calibreInput.className = 'edit-material-calibre';
+            calibreTd.appendChild(calibreInput);
+          } else {
+            nombreTd = document.createElement('td');
+            nombreTd.textContent = r.nombre;
+            calibreTd = document.createElement('td');
+            calibreTd.textContent = r.calibre;
+          }
+          tr.appendChild(nombreTd);
+          tr.appendChild(calibreTd);
+
+          // Total
+          const total = r.pesos.reduce((s,p) => s + parseFloat(p.peso), 0);
           sumGeneral += total;
           const totalStr = total.toFixed(2);
+          const totalTd = document.createElement('td');
+          totalTd.textContent = totalStr;
+          tr.appendChild(totalTd);
 
-          [r.nombre, r.calibre, totalStr].forEach(txt => {
+          // Pesos editables
+          for (let i = 0; i < maxP; i++) {
             const td = document.createElement('td');
-            td.textContent = txt;
+            if (r.pesos[i]) {
+              if (inventarioEditMode) {
+                const pesoInput = document.createElement('input');
+                pesoInput.type = 'number';
+                pesoInput.step = '0.01';
+                pesoInput.value = r.pesos[i].peso;
+                pesoInput.className = 'edit-paquete-peso';
+                pesoInput.dataset.paqueteId = r.pesos[i].id;
+                td.appendChild(pesoInput);
+              } else {
+                td.textContent = r.pesos[i].peso;
+              }
+            }
             tr.appendChild(td);
-          });
-
-          r.pesos.forEach(p => {
-            const td = document.createElement('td');
-            td.textContent = p;
-            tr.appendChild(td);
-          });
-
-          for (let i = r.pesos.length; i < maxP; i++) {
-            tr.appendChild(document.createElement('td'));
           }
+
+          // Tacha para eliminar
+          if (inventarioEditMode) {
+            const tdDel = document.createElement('td');
+            const btnDel = document.createElement('button');
+            btnDel.type = 'button';
+            btnDel.textContent = '❌';
+            btnDel.className = 'btn-del-material';
+            btnDel.title = 'Eliminar este ítem y todos sus paquetes';
+            btnDel.addEventListener('click', async () => {
+              if (confirm('¿Eliminar este ítem y todos sus paquetes?')) {
+                // Elimina paquetes
+                const paquetes = await db.collection('paquetes').where('materialId', '==', r.id).get();
+                for (const doc of paquetes.docs) {
+                  await db.collection('paquetes').doc(doc.id).delete();
+                }
+                // Elimina material
+                await db.collection('materiales').doc(r.id).delete();
+                renderInventario();
+              }
+            });
+            tdDel.appendChild(btnDel);
+            tr.appendChild(tdDel);
+          }
+
           body.appendChild(tr);
         });
       });
 
       document.getElementById('sum-general').textContent = sumGeneral.toFixed(2);
+
+      // Guardar cambios al salir de edición
+      if (!inventarioEditMode && window._wasEditing) {
+        guardarCambiosInventario();
+      }
+      window._wasEditing = inventarioEditMode;
+    }
+
+    // Guardar cambios en Firestore
+    async function guardarCambiosInventario() {
+      const filas = document.querySelectorAll('#inv-body tr:not(.category-row)');
+      for (const tr of filas) {
+        const materialId = tr.dataset.materialId;
+        const nombre = tr.querySelector('.edit-material-nombre')?.value.trim();
+        const calibre = tr.querySelector('.edit-material-calibre')?.value.trim();
+        if (nombre && calibre) {
+          await db.collection('materiales').doc(materialId).update({
+            nombre,
+            calibre
+          });
+        }
+        const pesos = tr.querySelectorAll('.edit-paquete-peso');
+        for (const ip of pesos) {
+          const paqueteId = ip.dataset.paqueteId;
+          const peso = parseFloat(ip.value);
+          if (!isNaN(peso)) {
+            await db.collection('paquetes').doc(paqueteId).update({
+              peso_actual: peso
+            });
+          }
+        }
+      }
+      renderInventario();
     }
 
     // Eventos Entrada
