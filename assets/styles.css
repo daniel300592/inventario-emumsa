@@ -345,12 +345,42 @@
 }
 
   /* Hover para los botones que no están activos */
-.tab-btn:not(.active):hover {
-      background: var(--secondary-green); /* Cambia el fondo al verde secundario */
-      color: #fff; /* Cambia el texto a blanco */
-      border-color: var(--secondary-green); /* Cambia el borde al verde secundario */
-      cursor: pointer; /* Cambia el cursor a pointer */
-}
+  .tab-btn:not(.active):hover {
+    background: var(--secondary-green); /* Cambia el fondo al verde secundario */
+    color: #fff; /* Cambia el texto a blanco */
+    border-color: var(--secondary-green); /* Cambia el borde al verde secundario */
+    cursor: pointer; /* Cambia el cursor a pointer */
+  }
+  /* Estilos para el contenedor de reportes */
+    .report-container {
+    display: flex; /* Muestra los elementos en fila */
+    gap: 20px; /* Espaciado entre las columnas */
+    margin-top: 20px; /* Espaciado superior */
+  }
+
+  .report-box {
+    flex: 1; /* Cada tabla ocupa el mismo espacio */
+    background: #fff; /* Fondo blanco para las cajas */
+    padding: 20px; /* Espaciado interno */
+    border-radius: 8px; /* Bordes redondeados */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Sombra */
+  }
+
+  #totales-report {
+    margin-top: 20px; /* Espaciado superior */
+    padding: 15px; /* Espaciado interno */
+    background: #fff; /* Fondo blanco */
+    border-radius: 8px; /* Bordes redondeados */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Sombra */
+    text-align: center; /* Centrar el texto */
+    font-size: 1.1rem; /* Tamaño de fuente */
+    color: var(--primary-green); /* Color del texto */
+  }
+
+  #totales-report span {
+    font-weight: bold; /* Resaltar los valores */
+    color: var(--secondary-green); /* Color secundario para los valores */
+  }
 
 /* Mejoras responsivas para tablas */
 @media (max-width: 768px) {
