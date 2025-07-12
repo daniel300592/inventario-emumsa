@@ -20,30 +20,32 @@
 
   <!-- Custom Styles -->
   <link rel="stylesheet" href="./assets/styles.css" />
+
+  <!-- Agregar descripción meta -->
+  <meta name="description" content="Sistema de gestión de inventario de acero para EMUMSA" />
+
+  <!-- Agregar favicon -->
+  <link rel="icon" type="image/png" href="./assets/favicon.png" />
 </head>
 
 <body>
   <div id="mensaje-guardado"></div>
   <!-- Header -->
-  <header class="site-header">
-    <nav>
+  <header class="site-header" role="banner">
+    <nav role="navigation" aria-label="Navegación principal">
       <button data-target="movimientos" class="active">Movimientos</button>
       <button data-target="nuevo-item">Nuevo Ítem</button>
       <button data-target="reportes">Reportes</button>
     </nav>
-    <img
-    class="logo"  
-    src="./assets\logo-con-nombre-transparencia-contorno-blanco-02.png"
-      alt="Logo"
-      style="height: 75px;"
-    />
+    <img class="logo" src="./assets/logo-con-nombre-transparencia-contorno-blanco-02.png" 
+         alt="Logo EMUMSA" width="auto" height="75" />
   </header>
 
   <!-- Main Content -->
-  <main>
+  <main role="main">
     <!-- Sección Movimientos -->
-    <section id="movimientos" class="active">
-      <h2>Movimientos de Material</h2>
+    <section id="movimientos" class="active" aria-labelledby="movimientos-title">
+      <h2 id="movimientos-title">Movimientos de Material</h2>
       <div class="flex">
         <!-- Entrada de Material -->
         <div class="box">
@@ -806,5 +808,11 @@
       renderInventario();
     })();
   </script>
+
+  <!-- Agregar loading state para operaciones -->
+  <div id="loading-overlay" class="hidden">
+    <div class="spinner"></div>
+    <p>Procesando...</p>
+  </div>
 </body>
 </html>
