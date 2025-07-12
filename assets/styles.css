@@ -344,6 +344,14 @@
   color: white;
 }
 
+  /* Hover para los botones que no están activos */
+.tab-btn:not(.active):hover {
+      background: var(--secondary-green); /* Cambia el fondo al verde secundario */
+      color: #fff; /* Cambia el texto a blanco */
+      border-color: var(--secondary-green); /* Cambia el borde al verde secundario */
+      cursor: pointer; /* Cambia el cursor a pointer */
+}
+
 /* Mejoras responsivas para tablas */
 @media (max-width: 768px) {
   .box {
