@@ -300,7 +300,25 @@
       authDomain: 'inventario-emumsa.firebaseapp.com',
       projectId: 'inventario-emumsa'
     });
+
     const db = firebase.firestore();
+
+    // Configuración de Firestore con caché
+    firebase.firestore().settings({
+      cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED,
+      merge: true
+    });
+
+    // Habilitar persistencia offline
+    firebase.firestore().enablePersistence({
+      synchronizeTabs: true
+    }).catch(err => {
+      if (err.code == 'failed-precondition') {
+        console.warn('La persistencia falló: múltiples pestañas abiertas');
+      } else if (err.code == 'unimplemented') {
+        console.warn('La persistencia no está disponible');
+      }
+    });
 
     let inventarioEditMode = false;
     let currentInventoryType = 'segunda'; // Por defecto muestra Segunda
@@ -415,37 +433,57 @@
 
     document.getElementById('btn-editar-inventario').addEventListener('click', async function() {
       const mensaje = document.getElementById('mensaje-guardado');
+      const loadingOverlay = document.getElementById('loading-overlay');
       
-      if (inventarioEditMode) {
-        // Mostrar mensaje de "Guardando..."
-        mensaje.textContent = 'Guardando cambios...';
-        mensaje.classList.add('mostrar');
+      try {
+        if (inventarioEditMode) {
+          loadingOverlay.classList.remove('hidden');
+          mensaje.textContent = 'Guardando cambios...';
+          mensaje.classList.add('mostrar');
+          
+          // Guardar cambios
+          await guardarCambiosInventario();
+          
+          // Cambiar estado y texto del botón
+          inventarioEditMode = false;
+          this.textContent = 'Editar Inventario';
+          
+          // Mostrar mensaje de éxito
+          mensaje.textContent = '¡Cambios guardados!';
+          mensaje.style.background = 'var(--primary-green)';
+          setTimeout(() => mensaje.classList.remove('mostrar'), 1500);
+        } else {
+          // Entrar en modo edición
+          inventarioEditMode = true;
+          this.textContent = 'Guardar Cambios';
+          
+          // Mostrar mensaje de modo edición
+          mensaje.textContent = 'Modo edición activado';
+          mensaje.classList.add('mostrar');
+          setTimeout(() => mensaje.classList.remove('mostrar'), 1500);
+        }
         
-        // Guardar cambios
-        await guardarCambiosInventario();
-        
-        // Cambiar modo
-        inventarioEditMode = false;
-        this.textContent = 'Editar Inventario';
-        
-        // Renderizar tabla
+        // Renderizar tabla con nuevo modo
         await renderInventario();
         
-        // Mostrar mensaje de "Guardado"
-        mensaje.textContent = '¡Cambios guardados!';
-        
-        // Ocultar mensaje después de 1.5 segundos
+      } catch (error) {
+        console.error('Error:', error);
+        mensaje.textContent = `Error: ${error.message}`;
+        mensaje.style.background = '#d32f2f';
         setTimeout(() => {
           mensaje.classList.remove('mostrar');
-        }, 1500);
+          mensaje.style.background = 'var(--primary-green)';
+        }, 2000);
         
-        return;
+        // Revertir estado en caso de error
+        if (inventarioEditMode) {
+          inventarioEditMode = false;
+          this.textContent = 'Editar Inventario';
+        }
+      } finally {
+        // Asegurarse de que el overlay siempre se oculte
+        loadingOverlay.classList.add('hidden');
       }
-      
-      // Entrar en modo edición
-      inventarioEditMode = true;
-      this.textContent = 'Salir de Edición';
-      renderInventario();
     });
 
     async function renderInventario() {
@@ -484,6 +522,10 @@
         .where('tipo', '==', currentInventoryType)
         .get();
       
+      if (mats.empty) {
+        console.warn('No se encontraron materiales para el tipo:', currentInventoryType);
+      }
+
       // Obtener paquetes activos solo del tipo actual
       const pkgsSnap = await db.collection('paquetes')
         .where('estado', '==', 'activo')
@@ -513,17 +555,18 @@
       });
 
       // Filtrar solo los materiales del tipo actual
-      const rows = mats.docs.map(m => {
-        const D = m.data();
-        const list = (map[m.id] || []).sort((a,b) => a.fecha - b.fecha);
-        const pesos = list.map(x => ({peso: x.peso.toFixed(2), id: x.id}));
-        return {id: m.id, categoria: D.categoriaId || 'Varios', nombre: D.nombre, calibre: D.calibre, pesos};
-      }).sort((a,b) => a.nombre.localeCompare(b.nombre) || a.calibre.localeCompare(b.calibre));
+      const rows = mats.docs
+        .map(m => {
+          const D = m.data();
+          const list = (map[m.id] || []).sort((a, b) => a.fecha - b.fecha);
+          const pesos = list.map(x => ({ peso: x.peso.toFixed(2), id: x.id }));
+          return { id: m.id, categoria: D.categoriaId || 'Varios', nombre: D.nombre, calibre: D.calibre, pesos, orden: D.orden || 0 };
+        })
+        .sort((a, b) => a.orden - b.orden || a.nombre.localeCompare(b.nombre) || a.calibre.localeCompare(b.calibre));
 
       // Encabezados
       ['Material', 'Calibre', 'Total']
-        .concat(Array.from({length: maxP}, (_,i) => 'Pqt ' + (i+1)))
-        .concat(inventarioEditMode ? [''] : [])
+        .concat(Array.from({ length: maxP }, (_, i) => 'Pqt ' + (i + 1)))
         .forEach(txt => {
           const th = document.createElement('th');
           th.textContent = txt;
@@ -545,6 +588,9 @@
         grp.forEach(r => {
           const tr = document.createElement('tr');
           tr.dataset.materialId = r.id;
+          tr.draggable = true; // Hacer la fila arrastrable
+          tr.classList.add('draggable-row'); // Clase para estilos y eventos
+          body.appendChild(tr);
 
           // Material y calibre editables
           let nombreTd, calibreTd;
@@ -638,72 +684,69 @@
         <br>
         <span class="total-general">Total General: ${totalGeneral.toFixed(2)} kg</span>
       `;
+
+      if (inventarioEditMode) {
+        setupDragAndDrop(); // Activar drag and drop solo en modo edición
+      }
     }
 
     // Guardar cambios en Firestore
     async function guardarCambiosInventario() {
       const mensaje = document.getElementById('mensaje-guardado');
       const loadingOverlay = document.getElementById('loading-overlay');
-      
+
       try {
-        // Mostrar loading
+        // Mostrar overlay
         loadingOverlay.classList.remove('hidden');
         mensaje.textContent = 'Guardando cambios...';
         mensaje.classList.add('mostrar');
-        
-        // Usar batch para operaciones múltiples
+
         const batch = db.batch();
-        const filas = document.querySelectorAll('#inv-body tr:not(.category-row)');
-        
-        for (const tr of filas) {
+        const filas = Array.from(document.querySelectorAll('#inv-body tr:not(.category-row)'));
+
+        filas.forEach((tr, index) => {
           const materialId = tr.dataset.materialId;
           const nombre = tr.querySelector('.edit-material-nombre')?.value?.trim();
           const calibre = tr.querySelector('.edit-material-calibre')?.value?.trim();
-          
+
           // Validar datos antes de guardar
           if (!nombre || !calibre) {
             throw new Error('Nombre y calibre son obligatorios');
           }
-          
+
           // Actualizar material
           const materialRef = db.collection('materiales').doc(materialId);
-          batch.update(materialRef, { nombre, calibre });
-          
+          batch.update(materialRef, { nombre, calibre, orden: index }); // Guardar el nuevo orden
+
           // Actualizar pesos de paquetes
           const pesos = tr.querySelectorAll('.edit-paquete-peso');
           for (const ip of pesos) {
             const paqueteId = ip.dataset.paqueteId;
             const peso = parseFloat(ip.value);
-            
+
             if (isNaN(peso) || peso < 0) {
               throw new Error('Peso inválido detectado');
             }
-            
+
             const paqueteRef = db.collection('paquetes').doc(paqueteId);
             batch.update(paqueteRef, { peso_actual: peso });
           }
-        }
-        
-        // Ejecutar todas las actualizaciones
+        });
+
         await batch.commit();
-        
-        // Mostrar mensaje de éxito
+
         mensaje.textContent = '¡Cambios guardados!';
         setTimeout(() => mensaje.classList.remove('mostrar'), 1500);
-        
       } catch (error) {
         console.error('Error al guardar:', error);
-        
-        // Mostrar mensaje de error al usuario
         mensaje.textContent = `Error: ${error.message}`;
         mensaje.style.background = '#d32f2f';
         setTimeout(() => {
           mensaje.classList.remove('mostrar');
           mensaje.style.background = 'var(--primary-green)';
         }, 2000);
-        
       } finally {
-        // Siempre ocultar loading
+        // Ocultar overlay
         loadingOverlay.classList.add('hidden');
       }
     }
@@ -753,18 +796,35 @@
     document.getElementById('form-entrada')
       .addEventListener('submit', async e => {
         e.preventDefault();
-        const cal = document.getElementById('entrada-calibre').value;
-        const tipo = document.getElementById('entrada-tipo').value;
 
-        if (!tipo) {
-          alert('Por favor seleccione un tipo');
+        const calibreSelect = document.getElementById('entrada-calibre');
+        const tipoSelect = document.getElementById('entrada-tipo');
+        const cal = calibreSelect.value;
+        const tipo = tipoSelect.value;
+
+        if (!cal || !tipo) {
+          alert('Por favor seleccione un calibre y un tipo válidos.');
           return;
         }
-        
-        // Verificar que el material corresponda al tipo seleccionado
-        const materialDoc = await db.collection('materiales').doc(cal).get();
-        if (materialDoc.data().tipo !== tipo) {
-          alert('El material seleccionado no corresponde a este tipo de inventario');
+
+        let materialId;
+        try {
+          const data = JSON.parse(cal); // Parsear el JSON del calibre seleccionado
+          materialId = data.tipos.find(t => t.tipo === tipo)?.id; // Buscar el ID del material según el tipo
+        } catch (error) {
+          alert('Error al procesar el calibre seleccionado.');
+          return;
+        }
+
+        if (!materialId) {
+          alert('El material seleccionado no corresponde a este tipo de inventario.');
+          return;
+        }
+
+        const materialDoc = await db.collection('materiales').doc(materialId).get();
+
+        if (!materialDoc.exists) {
+          alert('El material seleccionado no existe en la base de datos.');
           return;
         }
 
@@ -775,7 +835,7 @@
         for (const p of pesos) {
           const paqueteRef =
             await db.collection('paquetes').add({
-              materialId: cal,
+              materialId: materialId,
               peso_inicial: p,
               peso_actual: p,
               fecha_ingreso: new Date(),
@@ -786,7 +846,7 @@
             tipo: 'entrada',
             fecha: new Date(),
             peso: p,
-            materialId: cal,
+            materialId: materialId,
             paqueteId: paqueteRef.id
           });
         }
@@ -918,13 +978,17 @@
           return;
         }
 
+        // Validar existencia del ítem considerando el tipo
         const ex = await db.collection('materiales')
-          .where('nombre','==',n)
-          .where('calibre','==',cl)
+          .where('nombre', '==', n)
+          .where('calibre', '==', cl)
+          .where('tipo', '==', tipo) // Validar también el tipo
           .get();
+
         if (!ex.empty) {
-          err.textContent = 'Ítem ya existe';
-          return;}
+          err.textContent = 'Ítem ya existe en este tipo';
+          return;
+        }
 
         const docRef = await db.collection('materiales').add({
           nombre: n,
@@ -958,7 +1022,7 @@
 
         e.target.reset();
         document.getElementById('pesos-nuevo-container').innerHTML =
-          '<label>Peso paquete (kg><br><input type="number" step="0.01" class="nuevo-peso"></label>';
+          '<label>Peso paquete (kg)<br><input type="number" step="0.01" class="nuevo-peso"></label>';
         await loadMaterialNames();
         renderInventario();
       });
@@ -1037,18 +1101,82 @@
       populateCategorias();
       await loadMaterialNames();
       // Setup eventos de tabs
-      document.querySelectorAll('.inventory-tabs .tab-btn').forEach((btn) => { // Añadidos los paréntesis
+      document.querySelectorAll('.inventory-tabs .tab-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
           document.querySelectorAll('.inventory-tabs .tab-btn').forEach(b => 
             b.classList.remove('active')
           );
           btn.classList.add('active');
-          currentInventoryType = btn.dataset.category;
-          renderInventario();
+          currentInventoryType = btn.dataset.category; // Actualizar el tipo actual
+          renderInventario(); // Renderizar la tabla correspondiente
         });
       });
       renderInventario();
     })();
+
+    function setupDragAndDrop() {
+      if (!inventarioEditMode) return;
+
+      const rows = document.querySelectorAll('#inv-body .draggable-row');
+      let draggedRow = null;
+
+      rows.forEach(row => {
+        row.setAttribute('draggable', 'true'); // Asegurar que la fila sea arrastrable
+        
+        row.addEventListener('dragstart', (e) => {
+          draggedRow = row;
+          row.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+        });
+
+        row.addEventListener('dragend', () => {
+          row.classList.remove('dragging');
+          draggedRow = null;
+        });
+
+        row.addEventListener('dragover', e => {
+          e.preventDefault();
+          if (!draggedRow) return;
+
+          const targetRow = e.currentTarget;
+          if (targetRow === draggedRow) return;
+
+          // Encontrar la categoría actual
+          let currentCategory = null;
+          let element = targetRow;
+          while (element) {
+            if (element.classList.contains('category-row')) {
+              currentCategory = element;
+              break;
+            }
+            element = element.previousElementSibling;
+          }
+
+          // Verificar si pertenecen a la misma categoría
+          let draggedCategory = null;
+          element = draggedRow;
+          while (element) {
+            if (element.classList.contains('category-row')) {
+              draggedCategory = element;
+              break;
+            }
+            element = element.previousElementSibling;
+          }
+
+          if (currentCategory !== draggedCategory) return;
+
+          const tbody = targetRow.parentNode;
+          const rect = targetRow.getBoundingClientRect();
+          const middle = (rect.top + rect.bottom) / 2;
+
+          if (e.clientY < middle) {
+            tbody.insertBefore(draggedRow, targetRow);
+          } else {
+            tbody.insertBefore(draggedRow, targetRow.nextSibling);
+          }
+        });
+      });
+    }
   </script>
 
   <!-- Agregar loading state para operaciones -->
