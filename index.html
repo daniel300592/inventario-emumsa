@@ -69,6 +69,15 @@
               </select>
             </label>
 
+            <label>
+              Tipo<br />
+              <select id="entrada-tipo" required>
+                <option disabled selected>Seleccione un tipo</option>
+                <option value="segunda">Segunda</option>
+                <option value="overrolling">Overrolling</option>
+              </select>
+            </label>
+
             <div id="pesos-entrada-container">
               <label>
                 Peso (kg)<br />
@@ -108,6 +117,15 @@
             </label>
 
             <label>
+              Tipo<br />
+              <select id="salida-tipo" required>
+                <option disabled selected>Seleccione un tipo</option>
+                <option value="segunda">Segunda</option>
+                <option value="overrolling">Overrolling</option>
+              </select>
+            </label>
+
+            <label>
               Paquete<br />
               <select id="salida-paquete">
                 <option disabled selected>Seleccione paquete</option>
@@ -131,6 +149,10 @@
 
       <!-- Inventario Dinámico -->
       <h3>Inventario</h3>
+      <div class="inventory-tabs">
+        <button class="tab-btn active" data-category="segunda">Segunda</button>
+        <button class="tab-btn" data-category="overrolling">Overrolling</button>
+      </div>
       <button id="btn-editar-inventario" type="button">Editar Inventario</button>
       <table id="tabla-inventario">
         <colgroup>
@@ -145,7 +167,7 @@
         <tbody id="inv-body"></tbody>
       </table>
       <div id="total-general">
-        TOTAL GENERAL: <span id="sum-general">0.00</span> kg
+        <span id="sum-general"></span>
       </div>
     </section>
 
@@ -175,6 +197,14 @@
           <label>
             Categoría<br />
             <select id="nuevo-categoria"></select>
+          </label>
+
+          <label>
+            Tipo<br />
+            <select id="nuevo-tipo" required>
+              <option value="segunda">Segunda</option>
+              <option value="overrolling">Overrolling</option>
+            </select>
           </label>
 
           <div id="pesos-nuevo-container">
@@ -273,6 +303,11 @@
     const db = firebase.firestore();
 
     let inventarioEditMode = false;
+    let currentInventoryType = 'segunda'; // Por defecto muestra Segunda
+
+    // Primero, agregar variables globales para los totales
+    let totalSegunda = 0;
+    let totalOverrolling = 0;
 
     // Categorías y nombres
     const categories = [
@@ -324,21 +359,53 @@
     async function cargarCalibres(nombre, selId) {
       const sel = document.getElementById(selId);
       sel.innerHTML = '<option disabled selected>Seleccione calibre</option>';
+      
+      // Obtener materiales con ese nombre
       const snap = await db.collection('materiales')
         .where('nombre', '==', nombre)
         .get();
-      snap.docs.forEach(d => sel.appendChild(new Option(d.data().calibre, d.id)));
+
+      // Crear un Set para calibres únicos y un mapa para tipos disponibles
+      const calibresUnicos = new Set();
+      const tiposPorCalibre = new Map();
+
+      snap.docs.forEach(d => {
+        const data = d.data();
+        calibresUnicos.add(data.calibre);
+        
+        // Guardar el ID del material y su tipo para cada calibre
+        if (!tiposPorCalibre.has(data.calibre)) {
+          tiposPorCalibre.set(data.calibre, []);
+        }
+        tiposPorCalibre.get(data.calibre).push({
+          id: d.id,
+          tipo: data.tipo
+        });
+      });
+
+      // Agregar los calibres únicos al dropdown
+      Array.from(calibresUnicos)
+        .sort()
+        .forEach(calibre => {
+          const option = new Option(calibre, JSON.stringify({
+            calibre,
+            tipos: tiposPorCalibre.get(calibre)
+          }));
+          sel.appendChild(option);
+        });
     }
 
-    async function cargarPaquetes(calId, selId) {
+    async function cargarPaquetes(materialId, tipo, selId) {
       const sel = document.getElementById(selId);
       sel.innerHTML = '<option disabled selected>Seleccione paquete</option>';
+
       const snap = await db.collection('paquetes')
-        .where('materialId', '==', calId)
+        .where('materialId', '==', materialId)
         .where('estado', '==', 'activo')
         .get();
+
       snap.docs
-        .map(d => ({id: d.id, ...d.data()}))
+        .map(d => ({ id: d.id, ...d.data() }))
         .sort((a, b) => a.fecha_ingreso.toDate() - b.fecha_ingreso.toDate())
         .forEach(p => sel.appendChild(new Option(p.peso_actual.toFixed(2) + ' kg', p.id)));
     }
@@ -388,24 +455,68 @@
       body.innerHTML = '';
 
       let sumGeneral = 0;
-      const mats = await db.collection('materiales').get();
+      
+      // Obtener todos los materiales y paquetes para calcular el total general
+      const allMaterials = await db.collection('materiales').get();
+      const allPkgs = await db.collection('paquetes')
+        .where('estado', '==', 'activo')
+        .get();
+      
+      // Calcular totales por tipo
+      totalSegunda = 0;
+      totalOverrolling = 0;
+      
+      allPkgs.docs.forEach(doc => {
+        const data = doc.data();
+        const material = allMaterials.docs.find(m => m.id === data.materialId);
+        if (material) {
+          const materialData = material.data();
+          if (materialData.tipo === 'segunda') {
+            totalSegunda += data.peso_actual;
+          } else if (materialData.tipo === 'overrolling') {
+            totalOverrolling += data.peso_actual;
+          }
+        }
+      });
+
+      // Obtener solo los materiales del tipo actual
+      const mats = await db.collection('materiales')
+        .where('tipo', '==', currentInventoryType)
+        .get();
+      
+      // Obtener paquetes activos solo del tipo actual
       const pkgsSnap = await db.collection('paquetes')
         .where('estado', '==', 'activo')
         .get();
+        
       const map = {};
-
+      
+      // Filtrar paquetes por materialId del tipo actual
+      const materialesIds = new Set(mats.docs.map(doc => doc.id));
       pkgsSnap.docs.forEach(d => {
         const D = d.data();
-        map[D.materialId] = map[D.materialId] || [];
-        map[D.materialId].push({peso: D.peso_actual, fecha: D.fecha_ingreso.toDate(), id: d.id});
+        if (materialesIds.has(D.materialId)) {
+          map[D.materialId] = map[D.materialId] || [];
+          map[D.materialId].push({
+            peso: D.peso_actual, 
+            fecha: D.fecha_ingreso.toDate(), 
+            id: d.id
+          });
+        }
       });
 
+      // Calcular maxP solo para los materiales del tipo actual
       let maxP = 0;
+      mats.docs.forEach(m => {
+        const list = map[m.id] || [];
+        maxP = Math.max(maxP, list.length);
+      });
+
+      // Filtrar solo los materiales del tipo actual
       const rows = mats.docs.map(m => {
         const D = m.data();
         const list = (map[m.id] || []).sort((a,b) => a.fecha - b.fecha);
         const pesos = list.map(x => ({peso: x.peso.toFixed(2), id: x.id}));
-        maxP = Math.max(maxP, pesos.length);
         return {id: m.id, categoria: D.categoriaId || 'Varios', nombre: D.nombre, calibre: D.calibre, pesos};
       }).sort((a,b) => a.nombre.localeCompare(b.nombre) || a.calibre.localeCompare(b.calibre));
 
@@ -515,33 +626,85 @@
         });
       });
 
-      document.getElementById('sum-general').textContent = sumGeneral.toFixed(2);
+      // Actualizar los totales en la UI
+      const totalActual = currentInventoryType === 'segunda' ? totalSegunda : totalOverrolling;
+      const totalGeneral = totalSegunda + totalOverrolling;
 
+      // Modificar el HTML para mostrar ambos totales
+      document.getElementById('sum-general').innerHTML = `
+        <span class="total-tipo">Total ${currentInventoryType === 'segunda' ? 'Segunda' : 'Overrolling'}: 
+          ${totalActual.toFixed(2)} kg
+        </span>
+        <br>
+        <span class="total-general">Total General: ${totalGeneral.toFixed(2)} kg</span>
+      `;
     }
 
     // Guardar cambios en Firestore
     async function guardarCambiosInventario() {
-      const filas = document.querySelectorAll('#inv-body tr:not(.category-row)');
-      for (const tr of filas) {
-        const materialId = tr.dataset.materialId;
-        const nombre = tr.querySelector('.edit-material-nombre')?.value.trim();
-        const calibre = tr.querySelector('.edit-material-calibre')?.value.trim();
-        if (nombre && calibre) {
-          await db.collection('materiales').doc(materialId).update({
-            nombre,
-            calibre
-          });
-        }
-        const pesos = tr.querySelectorAll('.edit-paquete-peso');
-        for (const ip of pesos) {
-          const paqueteId = ip.dataset.paqueteId;
-          const peso = parseFloat(ip.value);
-          if (!isNaN(peso)) {
-            await db.collection('paquetes').doc(paqueteId).update({
-              peso_actual: peso
-            });
+      const mensaje = document.getElementById('mensaje-guardado');
+      const loadingOverlay = document.getElementById('loading-overlay');
+      
+      try {
+        // Mostrar loading
+        loadingOverlay.classList.remove('hidden');
+        mensaje.textContent = 'Guardando cambios...';
+        mensaje.classList.add('mostrar');
+        
+        // Usar batch para operaciones múltiples
+        const batch = db.batch();
+        const filas = document.querySelectorAll('#inv-body tr:not(.category-row)');
+        
+        for (const tr of filas) {
+          const materialId = tr.dataset.materialId;
+          const nombre = tr.querySelector('.edit-material-nombre')?.value?.trim();
+          const calibre = tr.querySelector('.edit-material-calibre')?.value?.trim();
+          
+          // Validar datos antes de guardar
+          if (!nombre || !calibre) {
+            throw new Error('Nombre y calibre son obligatorios');
+          }
+          
+          // Actualizar material
+          const materialRef = db.collection('materiales').doc(materialId);
+          batch.update(materialRef, { nombre, calibre });
+          
+          // Actualizar pesos de paquetes
+          const pesos = tr.querySelectorAll('.edit-paquete-peso');
+          for (const ip of pesos) {
+            const paqueteId = ip.dataset.paqueteId;
+            const peso = parseFloat(ip.value);
+            
+            if (isNaN(peso) || peso < 0) {
+              throw new Error('Peso inválido detectado');
+            }
+            
+            const paqueteRef = db.collection('paquetes').doc(paqueteId);
+            batch.update(paqueteRef, { peso_actual: peso });
           }
         }
+        
+        // Ejecutar todas las actualizaciones
+        await batch.commit();
+        
+        // Mostrar mensaje de éxito
+        mensaje.textContent = '¡Cambios guardados!';
+        setTimeout(() => mensaje.classList.remove('mostrar'), 1500);
+        
+      } catch (error) {
+        console.error('Error al guardar:', error);
+        
+        // Mostrar mensaje de error al usuario
+        mensaje.textContent = `Error: ${error.message}`;
+        mensaje.style.background = '#d32f2f';
+        setTimeout(() => {
+          mensaje.classList.remove('mostrar');
+          mensaje.style.background = 'var(--primary-green)';
+        }, 2000);
+        
+      } finally {
+        // Siempre ocultar loading
+        loadingOverlay.classList.add('hidden');
       }
     }
 
@@ -550,7 +713,19 @@
       .addEventListener('change', e => cargarCalibres(e.target.value, 'entrada-calibre'));
 
     document.getElementById('entrada-calibre')
-      .addEventListener('change', () => {
+      .addEventListener('change', function() {
+        const tipoSelect = document.getElementById('entrada-tipo');
+        const data = JSON.parse(this.value);
+        
+        // Habilitar/deshabilitar opciones del select de tipo
+        const tiposDisponibles = new Set(data.tipos.map(t => t.tipo));
+        
+        Array.from(tipoSelect.options).forEach(option => {
+          if (option.value) {
+            option.disabled = !tiposDisponibles.has(option.value);
+          }
+        });
+        
         document.getElementById('pesos-entrada-container').innerHTML =
           '<label>Peso (kg)<br><input type="number" step="0.01" class="entrada-peso" required></label>';
       });
@@ -579,6 +754,20 @@
       .addEventListener('submit', async e => {
         e.preventDefault();
         const cal = document.getElementById('entrada-calibre').value;
+        const tipo = document.getElementById('entrada-tipo').value;
+
+        if (!tipo) {
+          alert('Por favor seleccione un tipo');
+          return;
+        }
+        
+        // Verificar que el material corresponda al tipo seleccionado
+        const materialDoc = await db.collection('materiales').doc(cal).get();
+        if (materialDoc.data().tipo !== tipo) {
+          alert('El material seleccionado no corresponde a este tipo de inventario');
+          return;
+        }
+
         const pesos = [...document.querySelectorAll('.entrada-peso')]
           .map(i => parseFloat(i.value))
           .filter(v => v);
@@ -614,20 +803,67 @@
       .addEventListener('change', e => cargarCalibres(e.target.value, 'salida-calibre'));
 
     document.getElementById('salida-calibre')
-      .addEventListener('change', e => cargarPaquetes(e.target.value, 'salida-paquete'));
+      .addEventListener('change', function() {
+        const tipoSelect = document.getElementById('salida-tipo');
+        const data = JSON.parse(this.value);
+
+        // Habilitar/deshabilitar opciones del select de tipo según disponibilidad
+        const tiposDisponibles = new Set(data.tipos.map(t => t.tipo));
+
+        Array.from(tipoSelect.options).forEach(option => {
+          if (option.value) {
+            option.disabled = !tiposDisponibles.has(option.value);
+          }
+        });
+
+        // Reset paquetes
+        document.getElementById('salida-paquete').innerHTML =
+          '<option disabled selected>Seleccione paquete</option>';
+      });
+
+    document.getElementById('salida-tipo').addEventListener('change', function() {
+      const calibreSelect = document.getElementById('salida-calibre');
+      const tipo = this.value;
+
+      if (calibreSelect.value) {
+        const data = JSON.parse(calibreSelect.value);
+        const materialId = data.tipos.find(t => t.tipo === tipo)?.id;
+
+        if (materialId) {
+          cargarPaquetes(materialId, tipo, 'salida-paquete');
+        } else {
+          alert('El material seleccionado no corresponde a este tipo de inventario');
+        }
+      }
+    });
 
     document.getElementById('form-salida')
       .addEventListener('submit', async e => {
         e.preventDefault();
+        const tipo = document.getElementById('salida-tipo').value;
+
+        if (!tipo) {
+          alert('Por favor seleccione un tipo');
+          return;
+        }
+
         const cal = document.getElementById('salida-calibre').value;
         const pkg = document.getElementById('salida-paquete').value;
-        const p = parseFloat(
-          document.getElementById('salida-peso').value
-        );
+        const p = parseFloat(document.getElementById('salida-peso').value);
+
+        if (!cal || !tipo || !pkg || isNaN(p)) {
+          alert('Por favor complete todos los campos');
+          return;
+        }
 
         const ref = db.collection('paquetes').doc(pkg);
         const snap = await ref.get();
         const newP = snap.data().peso_actual - p;
+
+        if (newP < 0) {
+          alert('No hay suficiente material en el paquete');
+          return;
+        }
 
         await ref.update({
           peso_actual: newP,
@@ -670,15 +906,10 @@
     document.getElementById('form-nuevo-item')
       .addEventListener('submit', async e => {
         e.preventDefault();
-        const n = document
-          .getElementById('nuevo-nombre')
-          .value
-          .trim();
-        const cl = document
-          .getElementById('nuevo-calibre')
-          .value
-          .trim();
+        const n = document.getElementById('nuevo-nombre').value.trim();
+        const cl = document.getElementById('nuevo-calibre').value.trim();
         const cat = document.getElementById('nuevo-categoria').value;
+        const tipo = document.getElementById('nuevo-tipo').value;
         const err = document.getElementById('error-nuevo-item');
         err.textContent = '';
 
@@ -695,12 +926,12 @@
           err.textContent = 'Ítem ya existe';
           return;}
 
-        const docRef =
-          await db.collection('materiales').add({
-            nombre: n,
-            calibre: cl,
-            categoriaId: cat
-          });
+        const docRef = await db.collection('materiales').add({
+          nombre: n,
+          calibre: cl,
+          categoriaId: cat,
+          tipo: tipo // Agregar el tipo
+        });
 
         const nuevos = [...document.querySelectorAll('.nuevo-peso')]
           .map(i => parseFloat(i.value))
@@ -805,6 +1036,17 @@
       setupNav();
       populateCategorias();
       await loadMaterialNames();
+      // Setup eventos de tabs
+      document.querySelectorAll('.inventory-tabs .tab-btn').forEach((btn) => { // Añadidos los paréntesis
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.inventory-tabs .tab-btn').forEach(b => 
+            b.classList.remove('active')
+          );
+          btn.classList.add('active');
+          currentInventoryType = btn.dataset.category;
+          renderInventario();
+        });
+      });
       renderInventario();
     })();
   </script>
