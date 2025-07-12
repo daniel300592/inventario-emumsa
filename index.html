@@ -259,35 +259,41 @@
         </button>
       </div>
 
-      <div class="box">
-        <h3>Entradas por Material</h3>
-        <table id="report-entradas">
-          <thead>
-            <tr>
-              <th>Material</th>
-              <th>Peso Total (kg)</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-
-        <h3>Salidas por Material</h3>
-        <table id="report-salidas">
-          <thead>
-            <tr>
-              <th>Material</th>
-              <th>Peso Total (kg)</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-
-        <div id="totales-report">
-          Total Entradas:
-          <span id="sum-report-entradas">0.00</span> kg |
-          Total Salidas:
-          <span id="sum-report-salidas">0.00</span> kg
+      <div class="report-container">
+        <div class="report-box">
+          <h3>Entradas por Material</h3>
+          <table id="report-entradas">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Material</th>
+                <th>Peso Total (kg)</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
         </div>
+
+        <div class="report-box">
+          <h3>Salidas por Material</h3>
+          <table id="report-salidas">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Material</th>
+                <th>Peso Total (kg)</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="totales-report">
+        Total Entradas:
+        <span id="sum-report-entradas">0.00</span> kg |
+        Total Salidas:
+        <span id="sum-report-salidas">0.00</span> kg
       </div>
     </section>
   </main>
@@ -1029,55 +1035,124 @@
 
     // Reportes y Exportar Excel
     document.getElementById('btn-reporte').addEventListener('click', async () => {
-      const desde = new Date(document.getElementById('fecha-desde').value);
-      const hasta = new Date(document.getElementById('fecha-hasta').value);
-      hasta.setHours(23,59,59);
+      const desde = new Date(document.getElementById('fecha-desde').value + 'T00:00:00');
+      const hasta = new Date(document.getElementById('fecha-hasta').value + 'T23:59:59.999');
+      
+      // Convertir a UTC para asegurar que cubra todo el día local
+      desde.setMinutes(desde.getMinutes() - desde.getTimezoneOffset());
+      hasta.setMinutes(hasta.getMinutes() - hasta.getTimezoneOffset());
 
       const matsSnap = await db.collection('materiales').get();
       const matMap = {};
       matsSnap.docs.forEach(d => { matMap[d.id] = d.data().nombre });
 
-      // Entradas
+      // Obtener datos de entradas
       const entradasSnap = await db.collection('movimientos')
-        .where('tipo','==','entrada')
-        .where('fecha','>=',desde)
-        .where('fecha','<=',hasta)
+        .where('tipo', '==', 'entrada')
+        .where('fecha', '>=', desde)
+        .where('fecha', '<=', hasta)
         .get();
-      const grpEnt = {}; let sumEnt = 0;
+
+      // Obtener datos de salidas
+      const salidasSnap = await db.collection('movimientos')
+        .where('tipo', '==', 'salida')
+        .where('fecha', '>=', desde)
+        .where('fecha', '<=', hasta)
+        .get();
+
+      // Modificar los encabezados de las tablas de reportes
+      const reportEntHeaders = document.querySelector('#report-entradas thead tr');
+      const reportSalHeaders = document.querySelector('#report-salidas thead tr');
+      reportEntHeaders.innerHTML = `
+        <th>Fecha</th>
+        <th>Material</th>
+        <th>Peso Total (kg)</th>
+      `;
+      reportSalHeaders.innerHTML = `
+        <th>Fecha</th>
+        <th>Material</th>
+        <th>Peso Total (kg)</th>
+      `;
+
+      // Entradas con fechas ajustadas
+      const grpEnt = {}; 
+      let sumEnt = 0;
       entradasSnap.docs.forEach(d => {
         const data = d.data();
-        grpEnt[data.materialId] = (grpEnt[data.materialId] || 0) + data.peso;
+        const fecha = data.fecha.toDate();
+        const fechaFormateada = fecha.toLocaleDateString('es-ES', {
+          day: '2-digit',
+          month: '2-digit',
+          year: '2-digit'
+        });
+        
+        if (!grpEnt[data.materialId]) {
+          grpEnt[data.materialId] = {
+            fechas: {},
+            total: 0
+          };
+        }
+        if (!grpEnt[data.materialId].fechas[fechaFormateada]) {
+          grpEnt[data.materialId].fechas[fechaFormateada] = 0;
+        }
+        grpEnt[data.materialId].fechas[fechaFormateada] += data.peso;
+        grpEnt[data.materialId].total += data.peso;
         sumEnt += data.peso;
       });
-      const reportEnt =
-        document.getElementById('report-entradas').querySelector('tbody');
+
+      const reportEnt = document.getElementById('report-entradas').querySelector('tbody');
       reportEnt.innerHTML = '';
       Object.keys(grpEnt).forEach(id => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = '<td>' + (matMap[id]||id) + '</td><td>' + grpEnt[id].toFixed(2) + '</td>';
-        reportEnt.appendChild(tr);
+        Object.keys(grpEnt[id].fechas).forEach(fecha => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${fecha}</td>
+            <td>${matMap[id] || id}</td>
+            <td>${grpEnt[id].fechas[fecha].toFixed(2)}</td>
+          `;
+          reportEnt.appendChild(tr);
+        });
       });
       document.getElementById('sum-report-entradas').textContent = sumEnt.toFixed(2);
 
       // Salidas
-      const salidasSnap = await db.collection('movimientos')
-        .where('tipo','==','salida')
-        .where('fecha','>=',desde)
-        .where('fecha','<=',hasta)
-        .get();
-      const grpSal = {}; let sumSal = 0;
+      const grpSal = {}; 
+      let sumSal = 0;
       salidasSnap.docs.forEach(d => {
         const data = d.data();
-        grpSal[data.materialId] = (grpSal[data.materialId]||0) + data.peso;
+        const fecha = data.fecha.toDate();
+        const fechaFormateada = fecha.toLocaleDateString('es-ES', {
+          day: '2-digit',
+          month: '2-digit',
+          year: '2-digit'
+        });
+        
+        if (!grpSal[data.materialId]) {
+          grpSal[data.materialId] = {
+            fechas: {},
+            total: 0
+          };
+        }
+        if (!grpSal[data.materialId].fechas[fechaFormateada]) {
+          grpSal[data.materialId].fechas[fechaFormateada] = 0;
+        }
+        grpSal[data.materialId].fechas[fechaFormateada] += data.peso;
+        grpSal[data.materialId].total += data.peso;
         sumSal += data.peso;
       });
-      const reportSal =
-        document.getElementById('report-salidas').querySelector('tbody');
+
+      const reportSal = document.getElementById('report-salidas').querySelector('tbody');
       reportSal.innerHTML = '';
       Object.keys(grpSal).forEach(id => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = '<td>' + (matMap[id]||id) + '</td><td>' + grpSal[id].toFixed(2) + '</td>';
-        reportSal.appendChild(tr);
+        Object.keys(grpSal[id].fechas).forEach(fecha => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${fecha}</td>
+            <td>${matMap[id] || id}</td>
+            <td>${grpSal[id].fechas[fecha].toFixed(2)}</td>
+          `;
+          reportSal.appendChild(tr);
+        });
       });
       document.getElementById('sum-report-salidas').textContent = sumSal.toFixed(2);
     });
@@ -1113,6 +1188,46 @@
       });
       renderInventario();
     })();
+
+    // Agregar las validaciones de fechas
+    document.addEventListener('DOMContentLoaded', () => {
+      const fechaDesde = document.getElementById('fecha-desde');
+      const fechaHasta = document.getElementById('fecha-hasta');
+      const btnReporte = document.getElementById('btn-reporte');
+
+      // Establecer la fecha máxima para "Desde" como el día actual
+      const hoy = new Date();
+      const formatoHoy = hoy.toISOString().split('T')[0];
+      fechaDesde.max = formatoHoy;
+
+      // Validar la fecha "Desde"
+      fechaDesde.addEventListener('change', () => {
+        // Asegurarse que "Hasta" no sea anterior a "Desde"
+        fechaHasta.min = fechaDesde.value;
+        
+        validarFechas();
+      });
+
+      // Validar la fecha "Hasta"
+      fechaHasta.addEventListener('change', validarFechas);
+
+      function validarFechas() {
+        const desde = new Date(fechaDesde.value);
+        const hasta = new Date(fechaHasta.value);
+        
+        if (fechaDesde.value && fechaHasta.value) {
+          if (desde > hasta) {
+            alert('La fecha "Hasta" no puede ser anterior a la fecha "Desde"');
+            fechaHasta.value = '';
+            btnReporte.disabled = true;
+            return false;
+          }
+        }
+        
+        btnReporte.disabled = !(fechaDesde.value && fechaHasta.value);
+        return true;
+      }
+    });
 
     function setupDragAndDrop() {
       if (!inventarioEditMode) return;
