@@ -1,252 +1,243 @@
+/* ==================== 1. VARIABLES Y RESET ==================== */
 :root {
-      --primary-green: #04422a;
-      --secondary-green: #007731;
-      --light-gray: #f0f0f0;
-      --dark-gray: #333;
-      --font-family: 'Roboto', sans-serif;
-      --header-height: 72px;
-      --table-head-height: 56px;
-      --category-row-height: 40px;
-    }
+  --primary-green: #04422a;
+  --secondary-green: #007731;
+  --light-gray: #f0f0f0;
+  --dark-gray: #333;
+  --font-family: 'Roboto', sans-serif;
+  --header-height: 72px;
+  --table-head-height: 56px;
+  --category-row-height: 40px;
+}
 
-    *,
-    *::before,
-    *::after {
-      box-sizing: border-box;
-    }
+*, *::before, *::after {
+  box-sizing: border-box;
+}
 
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: var(--font-family);
-      background: var(--light-gray);
-      color: var(--dark-gray);
-    }
+/* ==================== 2. LAYOUT GENERAL ==================== */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-family);
+  background: var(--light-gray);
+  color: var(--dark-gray);
+}
 
-    /* Header */
-    .site-header {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: var(--header-height);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0 2rem;
-      background: linear-gradient(
-        90deg,
-        var(--primary-green),
-        var(--secondary-green)
-      );
-      z-index: 1000;
-    }
+main {
+  margin: calc(var(--header-height) + 1rem) auto 2rem;
+  max-width: 1200px;
+  padding: 0 1rem;
+}
 
-    nav {
-      display: flex;
-      gap: 1rem;
-    }
+main > section {
+  scroll-margin-top: var(--header-height);
+}
 
-    nav button {
-      background: transparent;
-      border: none;
-      color: #fff;
-      font-weight: 500;
-      padding: 0.5rem 1rem;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
+.flex {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
 
-    nav button:hover,
-    nav button.active {
-      background: rgba(255, 255, 255, 0.2);
-    }
+.box {
+  background: #fff;
+  border-radius: 8px;
+  padding: 1.5rem;
+  flex: 0 1 400px;
+  min-width: 280px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
 
-    /* Layout */
-    main {
-      margin: calc(var(--header-height) + 1rem) auto 2rem;
-      max-width: 1200px;
-      padding: 0 1rem;
-    }
+/* ==================== 3. HEADER Y NAVEGACIÓN ==================== */
+.site-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--header-height);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 2rem;
+  background: linear-gradient(90deg, var(--primary-green), var(--secondary-green));
+  z-index: 1000;
+}
 
-    main > section {
-      scroll-margin-top: var(--header-height); /* Usa la variable CSS que ya tienes definida */
-    }
+nav {
+  display: flex;
+  gap: 1rem;
+}
 
-    h2 {
-      font-size: 1.75rem;
-      margin-bottom: 1rem;
-      border-bottom: 2px solid var(--primary-green);
-      padding-bottom: 0.5rem;
-    }
+nav button {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: background 0.3s;
+}
 
-    .flex {
-      display: flex;
-      justify-content: center;
-      gap: 1.5rem;
-      flex-wrap: wrap;
-    }
+nav button:hover,
+nav button.active {
+  background: rgba(255, 255, 255, 0.2);
+}
 
-    .box {
-      background: #fff;
-      border-radius: 8px;
-      padding: 1.5rem;
-      flex: 0 1 400px;
-      min-width: 280px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-    }
+/* ==================== 4. TITULOS Y ETIQUETAS ==================== */
+h2 {
+  font-size: 1.75rem;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid var(--primary-green);
+  padding-bottom: 0.5rem;
+}
 
-    label {
-      display: block;
-      font-weight: 500;
-      margin-bottom: 0.5rem;
-    }
+label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
 
-    input,
-    select,
-    button[type="submit"] {
-      width: 100%;
-      padding: 0.6rem;
-      margin-bottom: 1rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 1rem;
-    }
+/* ==================== 5. FORMULARIOS E INPUTS ==================== */
+input,
+select,
+button[type="submit"] {
+  width: 100%;
+  padding: 0.6rem;
+  margin-bottom: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+}
 
-    button[type="submit"] {
-      background: var(--primary-green);
-      color: #fff;
-      border: none;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
+button[type="submit"] {
+  background: var(--primary-green);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: background 0.3s;
+}
 
-    button[type="submit"]:hover {
-      background: var(--secondary-green);
-    }
+button[type="submit"]:hover {
+  background: var(--secondary-green);
+}
 
-    .error {
-      color: #c00;
-      font-size: 0.9rem;
-      margin-bottom: 1rem;
-    }
+.error {
+  color: #c00;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
 
-    /* Table styles */
-    table {
-      table-layout: auto;
-      width: auto;
-      margin-top: 2rem;
-      background: #fff;
-    }
+/* Mejoras visuales para forms */
+form {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
 
-    thead th {
-      position: sticky;
-      top: var(--header-height);
-      height: var(--table-head-height);
-      background: var(--primary-green);
-      color: #fff;
-      padding: 0.75rem 1rem;
-      text-align: left;
-      z-index: 3;
-    }
+input:focus, 
+select:focus {
+  outline: none;
+  border-color: var(--secondary-green);
+  box-shadow: 0 0 0 2px rgba(0,119,49,0.2);
+}
 
-    th,
-    td {
-      padding: 0.75rem 1rem;
-      text-align: left;
-    }
+/* ==================== 6. TABLAS ==================== */
+table {
+  table-layout: auto;
+  width: auto;
+  margin-top: 2rem;
+  background: #fff;
+}
 
-    tbody tr:nth-child(even) {
-      background: var(--light-gray);
-    }
+thead th {
+  position: sticky;
+  top: var(--header-height);
+  height: var(--table-head-height);
+  background: var(--primary-green);
+  color: #fff;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  z-index: 3;
+}
 
-    .category-row td {
-      position: sticky;
-      top:
-        calc(
-          var(--header-height) +
-          var(--table-head-height)
-        );
-      background: #c8e6c9;
-      font-weight: bold;
-      height: var(--category-row-height);
-      z-index: 2;
-    }
+th,
+td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+}
 
-    tbody tr:hover {
-      background: rgba(255, 0, 0, 0.1);
-    }
+tbody tr:nth-child(even) {
+  background: var(--light-gray);
+}
 
-    tbody td:nth-child(1),
-    tbody td:nth-child(2),
-    tbody td:nth-child(3) {
-      font-weight: 700;
-    }
+.category-row td {
+  position: sticky;
+  top: calc(var(--header-height) + var(--table-head-height));
+  background: #c8e6c9;
+  font-weight: bold;
+  height: var(--category-row-height);
+  z-index: 2;
+}
 
-    /* Dynamic weight fields */
-    #pesos-entrada-container,
-    #pesos-nuevo-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
+tbody tr:hover {
+  background: rgba(255, 0, 0, 0.1);
+}
 
-    #pesos-entrada-container label,
-    #pesos-nuevo-container label {
-      width: 200px;
-    }
+tbody td:nth-child(1),
+tbody td:nth-child(2),
+tbody td:nth-child(3) {
+  font-weight: 700;
+}
 
-    #total-general {
-      margin-top: 1.5rem;
-      padding: 1rem;
-      background: #f5f5f5;
-      border-radius: 6px;
-    }
-
-    .total-tipo {
-      display: block;
-      margin-bottom: 0.5rem;
-      color: var(--primary-green);
-      font-size: 1.1rem;
-    }
-
-    .total-general {
-      display: block;
-      color: var(--secondary-green);
-      font-size: 1.2rem;
-      font-weight: 700;
-    }
-    
-    /* Tabla de inventario */
+/* Tabla de inventario */
 #tabla-inventario {
-  width: 100%; /* Asegura que la tabla ocupe todo el ancho disponible */
-  table-layout: fixed; /* Importante para distribución uniforme */
+  width: 100%;
+  table-layout: fixed;
 }
 
-/* Columnas fijas */
-#tabla-inventario th:nth-child(1) {
-  width: 15%; /* Material */
+#tabla-inventario th:nth-child(1) { width: 15%; }
+#tabla-inventario th:nth-child(2) { width: 10%; }
+#tabla-inventario th:nth-child(3) { width: 10%; }
+#tabla-inventario th:not(:nth-child(1)):not(:nth-child(2)):not(:nth-child(3)) { width: auto; }
+#tabla-inventario.edit-mode th:last-child { width: 50px; }
+
+/* ==================== 7. CAMPOS DINÁMICOS DE PESO ==================== */
+#pesos-entrada-container,
+#pesos-nuevo-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-#tabla-inventario th:nth-child(2) {
-  width: 10%; /* Calibre */
+#pesos-entrada-container label,
+#pesos-nuevo-container label {
+  width: 200px;
 }
 
-#tabla-inventario th:nth-child(3) {
-  width: 10%; /* Total */
+/* ==================== 8. TOTALES ==================== */
+#total-general {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: #f5f5f5;
+  border-radius: 6px;
 }
 
-/* Columnas dinámicas (paquetes) */
-#tabla-inventario th:not(:nth-child(1)):not(:nth-child(2)):not(:nth-child(3)) {
-  width: auto; /* Las columnas restantes se distribuyen el espacio restante */
+.total-tipo {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--primary-green);
+  font-size: 1.1rem;
 }
 
-/* Ajustes para el modo edición */
-#tabla-inventario.edit-mode th:last-child {
-  width: 50px; /* Columna de eliminar */
+.total-general {
+  display: block;
+  color: var(--secondary-green);
+  font-size: 1.2rem;
+  font-weight: 700;
 }
 
-/* Estilos para el mensaje de guardado */
+/* ==================== 9. MENSAJE DE GUARDADO ==================== */
 #mensaje-guardado {
   position: fixed;
   top: -50px;
@@ -270,7 +261,7 @@
   visibility: visible;
 }
 
-/* Mejoras para inputs editables en la tabla */
+/* ==================== 10. INPUTS EDITABLES EN TABLA ==================== */
 .edit-material-nombre,
 .edit-material-calibre {
   width: 100%;
@@ -282,14 +273,14 @@
 }
 
 .edit-paquete-peso {
-  width: 120%; /* Ligeramente menor que 100% para evitar desbordamiento */
+  width: 120%;
   padding: 4px;
   border: 1px solid var(--primary-green);
   border-radius: 4px;
   font-size: 0.9em;
   text-align: left;
-  margin: -4px; /* Compensar el padding de la celda */
-  box-sizing: border-box; /* Asegurar que padding no afecte el ancho */
+  margin: -4px;
+  box-sizing: border-box;
 }
 
 .edit-material-nombre:focus,
@@ -305,7 +296,7 @@
   box-shadow: 0 0 0 2px rgba(0,119,49,0.2);
 }
 
-/* Mejorar el botón de editar inventario */
+/* ==================== 11. BOTONES ==================== */
 #btn-editar-inventario {
   margin: 1rem 0;
   padding: 8px 16px;
@@ -321,7 +312,6 @@
   background: var(--secondary-green);
 }
 
-/* Estilo para el botón de eliminar */
 .btn-del-material {
   background: transparent;
   border: none;
@@ -336,7 +326,7 @@
   transform: scale(1.2);
 }
 
-/* Tabs de inventario */
+/* ==================== 12. TABS DE INVENTARIO ==================== */
 .inventory-tabs {
   margin: 1rem 0;
   border-bottom: 2px solid var(--primary-green);
@@ -359,76 +349,60 @@
   color: white;
 }
 
-  /* Hover para los botones que no están activos */
-  .tab-btn:not(.active):hover {
-    background: var(--secondary-green); /* Cambia el fondo al verde secundario */
-    color: #fff; /* Cambia el texto a blanco */
-    border-color: var(--secondary-green); /* Cambia el borde al verde secundario */
-    cursor: pointer; /* Cambia el cursor a pointer */
-  }
-  /* Estilos para el contenedor de reportes */
-    .report-container {
-    display: flex; /* Muestra los elementos en fila */
-    gap: 20px; /* Espaciado entre las columnas */
-    margin-top: 20px; /* Espaciado superior */
-  }
+.tab-btn:not(.active):hover {
+  background: var(--secondary-green);
+  color: #fff;
+  border-color: var(--secondary-green);
+  cursor: pointer;
+}
 
-  .report-box {
-    flex: 1; /* Cada tabla ocupa el mismo espacio */
-    background: #fff; /* Fondo blanco para las cajas */
-    padding: 20px; /* Espaciado interno */
-    border-radius: 8px; /* Bordes redondeados */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Sombra */
-  }
+/* ==================== 13. REPORTES ==================== */
+.report-container {
+  display: flex;
+  gap: 20px;
+  margin-top: 20px;
+}
 
-  #totales-report {
-    margin-top: 20px; /* Espaciado superior */
-    padding: 15px; /* Espaciado interno */
-    background: #fff; /* Fondo blanco */
-    border-radius: 8px; /* Bordes redondeados */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Sombra */
-    text-align: center; /* Centrar el texto */
-    font-size: 1.1rem; /* Tamaño de fuente */
-    color: var(--primary-green); /* Color del texto */
-  }
+.report-box {
+  flex: 1;
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
 
-  #totales-report span {
-    font-weight: bold; /* Resaltar los valores */
-    color: var(--secondary-green); /* Color secundario para los valores */
-  }
+#totales-report {
+  margin-top: 20px;
+  padding: 15px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  font-size: 1.1rem;
+  color: var(--primary-green);
+}
 
-/* Mejoras responsivas para tablas */
+#totales-report span {
+  font-weight: bold;
+  color: var(--secondary-green);
+}
+
+/* ==================== 14. RESPONSIVE ==================== */
 @media (max-width: 768px) {
   .box {
     padding: 1rem;
   }
-  
   table {
     display: block;
     overflow-x: auto;
     white-space: nowrap;
   }
-  
   th, td {
     padding: 0.5rem;
   }
 }
 
-/* Mejoras visuales para forms */
-form {
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-input:focus, 
-select:focus {
-  outline: none;
-  border-color: var(--secondary-green);
-  box-shadow: 0 0 0 2px rgba(0,119,49,0.2);
-}
-
-/* Loading overlay */
+/* ==================== 15. OVERLAYS Y SPINNER ==================== */
 #loading-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -455,6 +429,7 @@ select:focus {
   to { transform: rotate(360deg); }
 }
 
+/* ==================== 16. DRAG & DROP ==================== */
 .draggable-row.dragging {
   opacity: 0.5;
   background-color: #f0f0f0;
@@ -468,6 +443,7 @@ select:focus {
   cursor: grabbing;
 }
 
+/* ==================== 17. ANIMACIONES ==================== */
 @keyframes slide-up {
   from {
     transform: translateY(20px);
@@ -498,6 +474,7 @@ select:focus {
   animation: slide-down 0.2s ease-in-out;
 }
 
+/* ==================== 18. GRUPOS DE SALIDA ==================== */
 .salida-grupo {
   margin-bottom: 1rem;
   padding: 1rem;
