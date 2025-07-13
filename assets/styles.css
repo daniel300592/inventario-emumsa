@@ -5,6 +5,7 @@
   --light-gray: #f0f0f0;
   --dark-gray: #333;
   --font-family: 'Roboto', sans-serif;
+  --font-variant: "Montserrat", sans-serif; 
   --header-height: 72px;
   --table-head-height: 56px;
   --category-row-height: 40px;
@@ -73,6 +74,7 @@ nav button {
   background: transparent;
   border: none;
   color: #fff;
+  font-family: var(--font-variant);
   font-weight: 500;
   padding: 0.5rem 1rem;
   cursor: pointer;
