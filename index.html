@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestión de Inventario de Acero</title>
+  <title>Gestor de Inventario de EMUMSA</title>
 
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -28,9 +28,16 @@
   <link rel="icon" type="image/png" href="./assets/favicon.png" />
 </head>
 
+
 <body>
+  <!-- Mensaje de guardado y overlay de carga -->
   <div id="mensaje-guardado"></div>
-  <!-- Header -->
+  <div id="loading-overlay" class="hidden">
+    <div class="spinner"></div>
+    <p>Procesando...</p>
+  </div>
+
+  <!-- Header y navegación principal -->
   <header class="site-header" role="banner">
     <nav role="navigation" aria-label="Navegación principal">
       <button data-target="movimientos" class="active">Movimientos</button>
@@ -38,15 +45,15 @@
       <button data-target="nuevo-item">Nuevo Material</button>
       <button data-target="reportes">Reportes</button>
     </nav>
-<a href="https://www.emumsa.com" rel="noopener">
-    <img class="logo" src="./assets/logo-con-nombre-transparencia-contorno-blanco-02.png" 
-         alt="Logo EMUMSA" width="auto" height="75" />
-  </a>
+    <a href="https://www.emumsa.com" rel="noopener">
+      <img class="logo" src="./assets/logo-con-nombre-transparencia-contorno-blanco-02.png" 
+           alt="Logo EMUMSA" width="auto" height="75" />
+    </a>
   </header>
 
   <!-- Main Content -->
   <main role="main">
-    <!-- Sección Movimientos -->
+    <!-- ========== SECCIÓN MOVIMIENTOS ========== -->
     <section id="movimientos" class="active" aria-labelledby="movimientos-title">
       <h2 id="movimientos-title">Movimientos de Material</h2>
       <div class="flex">
@@ -54,45 +61,29 @@
         <div class="box">
           <h3>Entrada de Material</h3>
           <form id="form-entrada">
-            <label>
-              Material<br />
-              <input
-                list="datalist-entrada"
-                id="entrada-material"
-                required
-              />
+            <!-- Material, Calibre, Tipo, Pesos -->
+            <label>Material<br />
+              <input list="datalist-entrada" id="entrada-material" required />
               <datalist id="datalist-entrada"></datalist>
             </label>
             <div id="error-entrada-material" class="error"></div>
-
-            <label>
-              Calibre<br />
+            <label>Calibre<br />
               <select id="entrada-calibre">
                 <option disabled selected>Seleccione calibre</option>
               </select>
             </label>
-
-            <label>
-              Tipo<br />
+            <label>Tipo<br />
               <select id="entrada-tipo" required>
                 <option disabled selected>Seleccione un tipo</option>
                 <option value="segunda">Segunda</option>
                 <option value="overrolling">Overrolling</option>
               </select>
             </label>
-
             <div id="pesos-entrada-container">
-              <label>
-                Peso (kg)<br />
-                <input
-                  type="number"
-                  step="1"
-                  class="entrada-peso"
-                  required
-                />
+              <label>Peso (kg)<br />
+                <input type="number" step="1" class="entrada-peso" required />
               </label>
             </div>
-
             <button type="submit">Registrar Paquetes</button>
           </form>
         </div>
@@ -101,61 +92,45 @@
         <div class="box">
           <h3>Salida de Material</h3>
           <form id="form-salida">
-  <label>
-    Material<br />
-    <input 
-      type="text" 
-      list="datalist-salida" 
-      id="salida-material" 
-      autocomplete="off" 
-      required 
-    />
-    <datalist id="datalist-salida"></datalist>
-  </label>
-  <div id="error-salida-material" class="error"></div>
-
-  <label>
-    Calibre<br />
-    <select id="salida-calibre">
-      <option disabled selected>Seleccione calibre</option>
-    </select>
-  </label>
-
-  <label>
-    Tipo<br />
-    <select id="salida-tipo" required>
-      <option disabled selected>Seleccione un tipo</option>
-      <option value="segunda">Segunda</option>
-      <option value="overrolling">Overrolling</option>
-    </select>
-  </label>
-
-  <div id="pesos-salida-container">
-    <div class="salida-grupo">
-      <label>
-        Paquete<br />
-        <select class="salida-paquete">
-          <option disabled selected>Seleccione paquete</option>
-        </select>
-      </label>
-
-      <label>
-        Peso a descontar (kg)<br />
-        <input type="number" step="1" class="salida-peso" required />
-      </label>
-    </div>
-  </div>
-
-  <button type="submit">Registrar Salida</button>
-</form>
+            <label>Material<br />
+              <input type="text" list="datalist-salida" id="salida-material" autocomplete="off" required />
+              <datalist id="datalist-salida"></datalist>
+            </label>
+            <div id="error-salida-material" class="error"></div>
+            <label>Calibre<br />
+              <select id="salida-calibre">
+                <option disabled selected>Seleccione calibre</option>
+              </select>
+            </label>
+            <label>Tipo<br />
+              <select id="salida-tipo" required>
+                <option disabled selected>Seleccione un tipo</option>
+                <option value="segunda">Segunda</option>
+                <option value="overrolling">Overrolling</option>
+              </select>
+            </label>
+            <div id="pesos-salida-container">
+              <div class="salida-grupo">
+                <label>Paquete<br />
+                  <select class="salida-paquete">
+                    <option disabled selected>Seleccione paquete</option>
+                  </select>
+                </label>
+                <label>Peso a descontar (kg)<br />
+                  <input type="number" step="1" class="salida-peso" required />
+                </label>
+              </div>
+            </div>
+            <button type="submit">Registrar Salida</button>
+          </form>
         </div>
       </div>
-      </section>
-    <!-- Sección Inventario -->
+    </section>
+
+    <!-- ========== SECCIÓN INVENTARIO ========== -->
     <section id="inventario" aria-labelledby="inventario-title">
       <h2 id="inventario-title">Inventario de Material</h2>
-            <!-- Inventario Dinámico -->
-            <div class="inventory-tabs">
+      <div class="inventory-tabs">
         <button class="tab-btn active" data-category="segunda">Segunda</button>
         <button class="tab-btn" data-category="overrolling">Overrolling</button>
       </div>
@@ -177,101 +152,54 @@
       </div>
     </section>
 
-    <!-- Sección Nuevo Ítem -->
+    <!-- ========== SECCIÓN NUEVO MATERIAL ========== -->
     <section id="nuevo-item">
       <h2>Registro de Nuevo Material</h2>
       <div class="box">
         <form id="form-nuevo-item">
-          <label>
-            Nombre<br />
-            <input
-              type="text"
-              id="nuevo-nombre"
-              required
-            />
+          <label>Nombre<br />
+            <input type="text" id="nuevo-nombre" required />
           </label>
-
-          <label>
-            Calibre<br />
-            <input
-              type="text"
-              id="nuevo-calibre"
-              required
-            />
+          <label>Calibre<br />
+            <input type="text" id="nuevo-calibre" required />
           </label>
-
-          <label>
-            Categoría<br />
+          <label>Categoría<br />
             <select id="nuevo-categoria"></select>
           </label>
-
-          <label>
-            Tipo<br />
+          <label>Tipo<br />
             <select id="nuevo-tipo" required>
               <option value="segunda">Segunda</option>
               <option value="overrolling">Overrolling</option>
             </select>
           </label>
-
           <div id="pesos-nuevo-container">
-            <label>
-              Peso paquete (kg)<br />
-              <input
-                type="number"
-                step="1"
-                class="nuevo-peso"
-              />
+            <label>Peso paquete (kg)<br />
+              <input type="number" step="1" class="nuevo-peso" />
             </label>
           </div>
-
           <button type="submit">Agregar Material</button>
           <div id="error-nuevo-item" class="error"></div>
         </form>
       </div>
     </section>
 
-    <!-- Sección Reportes -->
+    <!-- ========== SECCIÓN REPORTES ========== -->
     <section id="reportes">
       <h2>Reportes</h2>
       <div class="box">
-        <label>
-          Desde<br />
-          <input
-            type="date"
-            id="fecha-desde"
-          />
+        <label>Desde<br />
+          <input type="date" id="fecha-desde" />
         </label>
-
-        <label>
-          Hasta<br />
-          <input
-            type="date"
-            id="fecha-hasta"
-          />
+        <label>Hasta<br />
+          <input type="date" id="fecha-hasta" />
         </label>
-
-        <button
-          type="button"
-          id="btn-reporte"
-        >
-          Generar
-        </button>
-
-        <button
-          type="button"
-          id="btn-exportar"
-        >
-          Descargar Excel
-        </button>
+        <button type="button" id="btn-reporte">Generar</button>
+        <button type="button" id="btn-exportar">Descargar Excel</button>
       </div>
-
       <div id="totales-report">
-        Total Entradas:
-        <span id="sum-report-entradas">0.00</span> kg |
-        Total Salidas:
-        <span id="sum-report-salidas">0.00</span> kg
+        <span>Entradas:</span> <span id="sum-report-entradas">0.00</span> kg |
+        <span>Salidas:</span> <span id="sum-report-salidas">0.00</span> kg
       </div>
-
       <div class="report-container">
         <div class="report-box">
           <h3>Entradas por Material</h3>
@@ -280,13 +208,14 @@
               <tr>
                 <th>Fecha</th>
                 <th>Material</th>
+                <th>Calibre</th>
+                <th>Tipo</th>
                 <th>Peso Total (kg)</th>
               </tr>
             </thead>
             <tbody></tbody>
           </table>
         </div>
-
         <div class="report-box">
           <h3>Salidas por Material</h3>
           <table id="report-salidas">
@@ -294,6 +223,8 @@
               <tr>
                 <th>Fecha</th>
                 <th>Material</th>
+                <th>Calibre</th>
+                <th>Tipo</th>
                 <th>Peso Total (kg)</th>
               </tr>
             </thead>
@@ -303,10 +234,6 @@
       </div>
     </section>
   </main>
-  <div id="loading-overlay" class="hidden">
-    <div class="spinner"></div>
-    <p>Procesando...</p>
-  </div>
   <script src="./assets/main.js"></script>
 </body>
 </html>
