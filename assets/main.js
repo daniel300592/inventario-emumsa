@@ -1,4 +1,4 @@
- // Firebase initialization
+// Firebase initialization
     firebase.initializeApp({
       apiKey: 'AIzaSyCgDCzu5_k2_k1fb3vghS7MrZez87n8qjg',
       authDomain: 'inventario-emumsa.firebaseapp.com',
@@ -1201,7 +1201,7 @@ setupFechasValidation();
       });
     }
 
-    // Modificar el evento de cambio del input de material para salidas
+    // Modificar el evento del input de material para salidas
 document.getElementById('salida-material').addEventListener('input', async e => {
   const input = e.target;
   const calibreSelect = document.getElementById('salida-calibre');
@@ -1215,9 +1215,9 @@ document.getElementById('salida-material').addEventListener('input', async e => 
     select.innerHTML = '<option disabled selected>Seleccione paquete</option>';
   });
 
-  // Si no hay valor, mostrar todos los materiales
-  if (!input.value) {
-    try {
+  try {
+    // Si no hay valor o es muy corto, mostrar todos los materiales
+    if (!input.value || input.value.length < 2) {
       const matsSnap = await db.collection('materiales').get();
       datalist.innerHTML = '';
       const nombres = new Set();
@@ -1230,17 +1230,12 @@ document.getElementById('salida-material').addEventListener('input', async e => 
         option.value = nombre;
         datalist.appendChild(option);
       });
-    } catch (error) {
-      console.error('Error al cargar materiales:', error);
+      return;
     }
-    return;
-  }
 
-  try {
-    // Buscar materiales que contengan el texto ingresado (case insensitive)
+    // Buscar materiales que coincidan parcialmente
     const searchText = input.value.toLowerCase();
     const matsSnap = await db.collection('materiales').get();
-    
     datalist.innerHTML = '';
     const nombres = new Set();
     
@@ -1263,36 +1258,19 @@ document.getElementById('salida-material').addEventListener('input', async e => 
   }
 });
 
-// Modificar el evento de cambio del selector de calibre
-document.getElementById('salida-calibre').addEventListener('change', function() {
-  const tipoSelect = document.getElementById('salida-tipo');
+// Agregar un evento change separado para cargar los calibres
+document.getElementById('salida-material').addEventListener('change', async e => {
+  const nombre = e.target.value.trim();
+  if (!nombre) return;
   
-  // Limpiar y deshabilitar selectores dependientes
-  document.querySelectorAll('.salida-paquete').forEach(select => {
-    select.innerHTML = '<option disabled selected>Seleccione paquete</option>';
-  });
-
-  // Si no hay valor seleccionado, salir
-  if (!this.value) return;
-
   try {
-    const data = JSON.parse(this.value);
-    const tipos = [...new Set(data.tipos.map(t => t.tipo))];
-
-    // Actualizar opciones del selector de tipo
-    tipoSelect.innerHTML = '<option disabled selected>Seleccione un tipo</option>';
-    tipos.forEach(tipo => {
-      const opt = document.createElement('option');
-      opt.value = tipo;
-      opt.textContent = tipo === 'segunda' ? 'Segunda' : 'Overrolling';
-      tipoSelect.appendChild(opt);
-    });
+    await cargarCalibres(nombre, 'salida-calibre');
   } catch (error) {
-    console.error('Error al procesar calibre:', error);
+    console.error('Error al cargar calibres:', error);
+    document.getElementById('error-salida-material').textContent = 'Error al cargar calibres';
   }
 });
-
-// Convierte un string a formato Proper Case
+    // Convierte un string a formato Proper Case
 function toProperCase(str) {
   return str
     .toLowerCase()
