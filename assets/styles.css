@@ -89,6 +89,7 @@ nav button.active {
 /* ==================== 4. TITULOS Y ETIQUETAS ==================== */
 h2 {
   font-size: 1.75rem;
+  font-family: var(--font-variant);
   margin-bottom: 1rem;
   border-bottom: 2px solid var(--primary-green);
   padding-bottom: 0.5rem;
@@ -135,6 +136,7 @@ form {
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  padding: 1.5rem;
 }
 
 input:focus, 
