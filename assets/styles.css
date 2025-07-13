@@ -125,6 +125,10 @@ button[type="submit"]:hover {
   background: var(--secondary-green);
 }
 
+#form-salida button[type="submit"] {
+  margin-top: 1.5em;
+}
+
 .error {
   color: #c00;
   font-size: 0.9rem;
