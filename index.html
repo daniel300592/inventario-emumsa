@@ -83,7 +83,7 @@
                 Peso (kg)<br />
                 <input
                   type="number"
-                  step="0.01"
+                  step="1"
                   class="entrada-peso"
                   required
                 />
@@ -98,52 +98,53 @@
         <div class="box">
           <h3>Salida de Material</h3>
           <form id="form-salida">
-            <label>
-              Material<br />
-              <input
-                list="datalist-salida"
-                id="salida-material"
-                required
-              />
-              <datalist id="datalist-salida"></datalist>
-            </label>
-            <div id="error-salida-material" class="error"></div>
+  <label>
+    Material<br />
+    <input 
+      type="text" 
+      list="datalist-salida" 
+      id="salida-material" 
+      autocomplete="off" 
+      required 
+    />
+    <datalist id="datalist-salida"></datalist>
+  </label>
+  <div id="error-salida-material" class="error"></div>
 
-            <label>
-              Calibre<br />
-              <select id="salida-calibre">
-                <option disabled selected>Seleccione calibre</option>
-              </select>
-            </label>
+  <label>
+    Calibre<br />
+    <select id="salida-calibre">
+      <option disabled selected>Seleccione calibre</option>
+    </select>
+  </label>
 
-            <label>
-              Tipo<br />
-              <select id="salida-tipo" required>
-                <option disabled selected>Seleccione un tipo</option>
-                <option value="segunda">Segunda</option>
-                <option value="overrolling">Overrolling</option>
-              </select>
-            </label>
+  <label>
+    Tipo<br />
+    <select id="salida-tipo" required>
+      <option disabled selected>Seleccione un tipo</option>
+      <option value="segunda">Segunda</option>
+      <option value="overrolling">Overrolling</option>
+    </select>
+  </label>
 
-            <label>
-              Paquete<br />
-              <select id="salida-paquete">
-                <option disabled selected>Seleccione paquete</option>
-              </select>
-            </label>
+  <div id="pesos-salida-container">
+    <div class="salida-grupo">
+      <label>
+        Paquete<br />
+        <select class="salida-paquete">
+          <option disabled selected>Seleccione paquete</option>
+        </select>
+      </label>
 
-            <label>
-              Peso a descontar (kg)<br />
-              <input
-                type="number"
-                step="0.01"
-                id="salida-peso"
-                required
-              />
-            </label>
+      <label>
+        Peso a descontar (kg)<br />
+        <input type="number" step="1" class="salida-peso" required />
+      </label>
+    </div>
+  </div>
 
-            <button type="submit">Registrar Salida</button>
-          </form>
+  <button type="submit">Registrar Salida</button>
+</form>
         </div>
       </div>
 
@@ -212,7 +213,7 @@
               Peso paquete (kg)<br />
               <input
                 type="number"
-                step="0.01"
+                step="1"
                 class="nuevo-peso"
               />
             </label>
@@ -259,6 +260,13 @@
         </button>
       </div>
 
+      <div id="totales-report">
+        Total Entradas:
+        <span id="sum-report-entradas">0.00</span> kg |
+        Total Salidas:
+        <span id="sum-report-salidas">0.00</span> kg
+      </div>
+
       <div class="report-container">
         <div class="report-box">
           <h3>Entradas por Material</h3>
@@ -289,12 +297,7 @@
         </div>
       </div>
 
-      <div id="totales-report">
-        Total Entradas:
-        <span id="sum-report-entradas">0.00</span> kg |
-        Total Salidas:
-        <span id="sum-report-salidas">0.00</span> kg
-      </div>
+
     </section>
   </main>
 
@@ -419,19 +422,44 @@
         });
     }
 
-    async function cargarPaquetes(materialId, tipo, selId) {
-      const sel = document.getElementById(selId);
+    // Modificar la función cargarPaquetes
+    async function cargarPaquetes(materialId, tipo, selectElement) {
+      const sel = typeof selectElement === 'string' 
+        ? document.getElementById(selectElement)
+        : selectElement;
+
+      if (!sel) {
+        console.error('Selector no encontrado');
+        return;
+      }
+
       sel.innerHTML = '<option disabled selected>Seleccione paquete</option>';
 
+      // Obtener todos los paquetes activos
       const snap = await db.collection('paquetes')
         .where('materialId', '==', materialId)
         .where('estado', '==', 'activo')
         .get();
 
+      // Obtener los IDs de paquetes ya seleccionados
+      const paquetesSeleccionados = Array.from(document.querySelectorAll('.salida-paquete'))
+        .map(select => select.value)
+        .filter(value => value); // Filtrar valores vacíos
+
+      // Filtrar y mostrar solo los paquetes no seleccionados
       snap.docs
         .map(d => ({ id: d.id, ...d.data() }))
+        .filter(p => !paquetesSeleccionados.includes(p.id)) // Filtrar paquetes ya seleccionados
         .sort((a, b) => a.fecha_ingreso.toDate() - b.fecha_ingreso.toDate())
-        .forEach(p => sel.appendChild(new Option(p.peso_actual.toFixed(2) + ' kg', p.id)));
+        .forEach(p => sel.appendChild(new Option(p.peso_actual.toFixed(0) + ' kg', p.id)));
+    }
+
+    // Google Sheets export
+    async function exportToExcel(data, filename) {
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Report');
+      XLSX.writeFile(wb, filename);
     }
 
     // Render Inventario
@@ -457,7 +485,7 @@
           // Mostrar mensaje de éxito
           mensaje.textContent = '¡Cambios guardados!';
           mensaje.style.background = 'var(--primary-green)';
-          setTimeout(() => mensaje.classList.remove('mostrar'), 1500);
+          
         } else {
           // Entrar en modo edición
           inventarioEditMode = true;
@@ -466,26 +494,29 @@
           // Mostrar mensaje de modo edición
           mensaje.textContent = 'Modo edición activado';
           mensaje.classList.add('mostrar');
-          setTimeout(() => mensaje.classList.remove('mostrar'), 1500);
         }
         
         // Renderizar tabla con nuevo modo
         await renderInventario();
         
+        // Ocultar mensaje después de un tiempo
+        setTimeout(() => mensaje.classList.remove('mostrar'), 1500);
+        
       } catch (error) {
         console.error('Error:', error);
         mensaje.textContent = `Error: ${error.message}`;
         mensaje.style.background = '#d32f2f';
+        mensaje.classList.add('mostrar');
+        
+        // Revertir estado en caso de error
+        inventarioEditMode = false;
+        this.textContent = 'Editar Inventario';
+        
         setTimeout(() => {
           mensaje.classList.remove('mostrar');
           mensaje.style.background = 'var(--primary-green)';
         }, 2000);
         
-        // Revertir estado en caso de error
-        if (inventarioEditMode) {
-          inventarioEditMode = false;
-          this.textContent = 'Editar Inventario';
-        }
       } finally {
         // Asegurarse de que el overlay siempre se oculte
         loadingOverlay.classList.add('hidden');
@@ -565,7 +596,10 @@
         .map(m => {
           const D = m.data();
           const list = (map[m.id] || []).sort((a, b) => a.fecha - b.fecha);
-          const pesos = list.map(x => ({ peso: x.peso.toFixed(2), id: x.id }));
+          const pesos = list.map(x => ({ 
+            peso: x.peso.toFixed(0), // Remover 'Kg' aquí
+            id: x.id 
+          }));
           return { id: m.id, categoria: D.categoriaId || 'Varios', nombre: D.nombre, calibre: D.calibre, pesos, orden: D.orden || 0 };
         })
         .sort((a, b) => a.orden - b.orden || a.nombre.localeCompare(b.nombre) || a.calibre.localeCompare(b.calibre));
@@ -626,7 +660,7 @@
           // Total
           const total = r.pesos.reduce((s,p) => s + parseFloat(p.peso), 0);
           sumGeneral += total;
-          const totalStr = total.toFixed(2);
+          const totalStr = `${total.toFixed(0)} kg`;
           const totalTd = document.createElement('td');
           totalTd.textContent = totalStr;
           tr.appendChild(totalTd);
@@ -638,13 +672,13 @@
               if (inventarioEditMode) {
                 const pesoInput = document.createElement('input');
                 pesoInput.type = 'number';
-                pesoInput.step = '0.01';
-                pesoInput.value = r.pesos[i].peso;
+                pesoInput.step = '1';
+                pesoInput.value = r.pesos[i].peso; // Usar el valor sin 'Kg'
                 pesoInput.className = 'edit-paquete-peso';
                 pesoInput.dataset.paqueteId = r.pesos[i].id;
                 td.appendChild(pesoInput);
               } else {
-                td.textContent = r.pesos[i].peso;
+                td.textContent = `${r.pesos[i].peso} Kg`; // Agregar 'Kg' aquí
               }
             }
             tr.appendChild(td);
@@ -685,10 +719,10 @@
       // Modificar el HTML para mostrar ambos totales
       document.getElementById('sum-general').innerHTML = `
         <span class="total-tipo">Total ${currentInventoryType === 'segunda' ? 'Segunda' : 'Overrolling'}: 
-          ${totalActual.toFixed(2)} kg
+          ${totalActual.toFixed(0)} kg
         </span>
         <br>
-        <span class="total-general">Total General: ${totalGeneral.toFixed(2)} kg</span>
+        <span class="total-general">Total General: ${totalGeneral.toFixed(0)} kg</span>
       `;
 
       if (inventarioEditMode) {
@@ -776,7 +810,7 @@
         });
         
         document.getElementById('pesos-entrada-container').innerHTML =
-          '<label>Peso (kg)<br><input type="number" step="0.01" class="entrada-peso" required></label>';
+          '<label>Peso (kg)<br><input type="number" step="1" class="entrada-peso" required></label>';
       });
 
     document.getElementById('pesos-entrada-container')
@@ -788,7 +822,7 @@
             lbl.innerHTML = 'Peso (kg)<br>';
             const ip = document.createElement('input');
             ip.type = 'number';
-            ip.step = '0.01';
+            ip.step = '1';
             ip.className = 'entrada-peso';
             ip.required = false;
             lbl.appendChild(ip);
@@ -859,7 +893,7 @@
 
         e.target.reset();
         document.getElementById('pesos-entrada-container').innerHTML =
-          '<label>Peso (kg)<br><input type="number" step="0.01" class="entrada-peso" required></label>';
+          '<label>Peso (kg)<br><input type="number" step="1" class="entrada-peso" required></label>';
 
         renderInventario();
       });
@@ -896,58 +930,218 @@
         const materialId = data.tipos.find(t => t.tipo === tipo)?.id;
 
         if (materialId) {
-          cargarPaquetes(materialId, tipo, 'salida-paquete');
+          // Cargar paquetes en todos los selectores existentes
+          document.querySelectorAll('.salida-paquete').forEach(select => {
+            cargarPaquetes(materialId, tipo, select);
+          });
         } else {
           alert('El material seleccionado no corresponde a este tipo de inventario');
         }
       }
     });
 
-    document.getElementById('form-salida')
-      .addEventListener('submit', async e => {
-        e.preventDefault();
-        const tipo = document.getElementById('salida-tipo').value;
+    document.getElementById('form-salida').innerHTML = `
+  <label>
+    Material<br />
+    <input 
+      type="text" 
+      list="datalist-salida" 
+      id="salida-material" 
+      autocomplete="off" 
+      required 
+    />
+    <datalist id="datalist-salida"></datalist>
+  </label>
+  <div id="error-salida-material" class="error"></div>
 
-        if (!tipo) {
-          alert('Por favor seleccione un tipo');
-          return;
+  <label>
+    Calibre<br />
+    <select id="salida-calibre">
+      <option disabled selected>Seleccione calibre</option>
+    </select>
+  </label>
+
+  <label>
+    Tipo<br />
+    <select id="salida-tipo" required>
+      <option disabled selected>Seleccione un tipo</option>
+      <option value="segunda">Segunda</option>
+      <option value="overrolling">Overrolling</option>
+    </select>
+  </label>
+
+  <div id="pesos-salida-container">
+    <div class="salida-grupo">
+      <label>
+        Paquete<br />
+        <select class="salida-paquete">
+          <option disabled selected>Seleccione paquete</option>
+        </select>
+      </label>
+
+      <label>
+        Peso a descontar (kg)<br />
+        <input type="number" step="1" class="salida-peso" required />
+      </label>
+    </div>
+  </div>
+
+  <button type="submit">Registrar Salida</button>
+`;
+
+    // Modificar el evento de cambio de tipo para manejar múltiples selectores de paquetes
+    document.getElementById('salida-tipo').addEventListener('change', function() {
+      const calibreSelect = document.getElementById('salida-calibre');
+      const tipo = this.value;
+
+      if (calibreSelect.value) {
+        const data = JSON.parse(calibreSelect.value);
+        const materialId = data.tipos.find(t => t.tipo === tipo)?.id;
+
+        if (materialId) {
+          // Cargar paquetes en todos los selectores existentes
+          document.querySelectorAll('.salida-paquete').forEach(select => {
+            cargarPaquetes(materialId, tipo, select);
+          });
+        } else {
+          alert('El material seleccionado no corresponde a este tipo de inventario');
         }
+      }
+    });
 
-        const cal = document.getElementById('salida-calibre').value;
-        const pkg = document.getElementById('salida-paquete').value;
-        const p = parseFloat(document.getElementById('salida-peso').value);
+    // Agregar evento para detectar cuando se selecciona un paquete y su peso
+    document.getElementById('pesos-salida-container').addEventListener('input', async e => {
+      if (e.target.classList.contains('salida-peso')) {
+        const grupos = document.querySelectorAll('.salida-grupo');
+        const ultimoGrupo = grupos[grupos.length - 1];
+        const pesoInput = ultimoGrupo.querySelector('.salida-peso');
+        const paqueteSelect = ultimoGrupo.querySelector('.salida-paquete');
 
-        if (!cal || !tipo || !pkg || isNaN(p)) {
-          alert('Por favor complete todos los campos');
-          return;
+        if (pesoInput.value && paqueteSelect.value) {
+          // Verificar si hay más paquetes disponibles
+          const tipo = document.getElementById('salida-tipo').value;
+          const calibreSelect = document.getElementById('salida-calibre');
+          const data = JSON.parse(calibreSelect.value);
+          const materialId = data.tipos.find(t => t.tipo === tipo)?.id;
+          
+          if (materialId) {
+            // Obtener paquetes disponibles
+            const snap = await db.collection('paquetes')
+              .where('materialId', '==', materialId)
+              .where('estado', '==', 'activo')
+              .get();
+
+            // Obtener los IDs de paquetes ya seleccionados
+            const paquetesSeleccionados = Array.from(document.querySelectorAll('.salida-paquete'))
+              .map(select => select.value)
+              .filter(value => value);
+
+            // Verificar si quedan paquetes sin seleccionar
+            const paquetesDisponibles = snap.docs
+              .filter(d => !paquetesSeleccionados.includes(d.id));
+
+            // Solo crear nuevo grupo si hay paquetes disponibles
+            if (paquetesDisponibles.length > 0) {
+              const nuevoGrupo = document.createElement('div');
+              nuevoGrupo.className = 'salida-grupo';
+              nuevoGrupo.innerHTML = `
+                <label>
+                  Paquete<br />
+                  <select class="salida-paquete">
+                    <option disabled selected>Seleccione paquete</option>
+                  </select>
+                </label>
+                <label>
+                  Peso a descontar (kg)<br />
+                  <input type="number" step="1" class="salida-peso" />
+                </label>
+              `;
+              document.getElementById('pesos-salida-container').appendChild(nuevoGrupo);
+
+              const nuevoSelect = nuevoGrupo.querySelector('.salida-paquete');
+              cargarPaquetes(materialId, tipo, nuevoSelect);
+            }
+          }
         }
+      }
+    });
+
+    // Modificar el evento submit del formulario de salida
+    document.getElementById('form-salida').addEventListener('submit', async e => {
+  e.preventDefault();
+  const tipo = document.getElementById('salida-tipo').value;
+  const calibreSelect = document.getElementById('salida-calibre'); // Agregar esta línea
+
+  if (!tipo) {
+    alert('Por favor seleccione un tipo');
+    return;
+  }
+
+  const grupos = document.querySelectorAll('.salida-grupo');
+  const batch = db.batch();
+
+  try {
+    for (const grupo of grupos) {
+      const paqueteSelect = grupo.querySelector('.salida-paquete');
+      const pesoInput = grupo.querySelector('.salida-peso');
+      
+      if (paqueteSelect.value && pesoInput.value) {
+        const pkg = paqueteSelect.value;
+        const p = parseFloat(pesoInput.value);
 
         const ref = db.collection('paquetes').doc(pkg);
         const snap = await ref.get();
         const newP = snap.data().peso_actual - p;
 
         if (newP < 0) {
-          alert('No hay suficiente material en el paquete');
-          return;
+          throw new Error(`No hay suficiente material en el paquete ${pkg}`);
         }
 
-        await ref.update({
+        batch.update(ref, {
           peso_actual: newP,
           estado: newP <= 0 ? 'agotado' : 'activo'
         });
 
-        await db.collection('movimientos').add({
+        // Obtener el materialId del paquete
+        const materialId = snap.data().materialId;
+
+        const movimientoRef = db.collection('movimientos').doc();
+        batch.set(movimientoRef, {
           tipo: 'salida',
           fecha: new Date(),
           peso: p,
-          materialId: cal,
+          materialId: materialId, // Usar el materialId del paquete
           paqueteId: pkg
         });
+      }
+    }
 
-        e.target.reset();
-        renderInventario();
-      });
+    await batch.commit();
+    e.target.reset();
+    
+    // Restablecer el contenedor de paquetes a un solo grupo
+    document.getElementById('pesos-salida-container').innerHTML = `
+      <div class="salida-grupo">
+        <label>
+          Paquete<br />
+          <select class="salida-paquete">
+            <option disabled selected>Seleccione paquete</option>
+          </select>
+        </label>
 
+        <label>
+          Peso a descontar (kg)<br />
+          <input type="number" step="1" class="salida-peso" required />
+        </label>
+      </div>
+    `;
+    
+    renderInventario();
+
+  } catch (error) {
+    alert(error.message);
+  }
+});
     // Nuevo Ítem con paquetes opcionales
     document.getElementById('pesos-nuevo-container')
       .addEventListener('input', e => {
@@ -958,7 +1152,7 @@
             lbl.innerHTML = 'Peso paquete (kg)<br>';
             const ip = document.createElement('input');
             ip.type = 'number';
-            ip.step = '0.01';
+            ip.step = '1';
             ip.className = 'nuevo-peso';
             ip.required = false;
             lbl.appendChild(ip);
@@ -1028,53 +1222,57 @@
 
         e.target.reset();
         document.getElementById('pesos-nuevo-container').innerHTML =
-          '<label>Peso paquete (kg)<br><input type="number" step="0.01" class="nuevo-peso"></label>';
+          '<label>Peso paquete (kg)<br><input type="number" step="1" class="nuevo-peso"></label>';
         await loadMaterialNames();
         renderInventario();
       });
 
     // Reportes y Exportar Excel
     document.getElementById('btn-reporte').addEventListener('click', async () => {
+      // Crear fechas con la zona horaria local y agregar la hora específica
       const desde = new Date(document.getElementById('fecha-desde').value + 'T00:00:00');
       const hasta = new Date(document.getElementById('fecha-hasta').value + 'T23:59:59.999');
       
-      // Convertir a UTC para asegurar que cubra todo el día local
-      desde.setMinutes(desde.getMinutes() - desde.getTimezoneOffset());
-      hasta.setMinutes(hasta.getMinutes() - hasta.getTimezoneOffset());
+  // Ajustar las fechas al inicio y fin del día en la zona horaria local
+  desde.setHours(0, 0, 0, 0);
+  hasta.setHours(23, 59, 59, 999);
 
+  // Obtener el offset de la zona horaria en milisegundos
+  const offset = desde.getTimezoneOffset() * 60000;
+
+  // Convertir a UTC manteniendo la hora local
+  const desdeUTC = new Date(desde.getTime());
+  const hastaUTC = new Date(hasta.getTime());
+
+      // Obtener materiales y crear el mapa primero
       const matsSnap = await db.collection('materiales').get();
       const matMap = {};
-      matsSnap.docs.forEach(d => { matMap[d.id] = d.data().nombre });
+      matsSnap.docs.forEach(doc => {
+        matMap[doc.id] = doc.data().nombre;
+      });
 
-      // Obtener datos de entradas
-      const entradasSnap = await db.collection('movimientos')
-        .where('tipo', '==', 'entrada')
-        .where('fecha', '>=', desde)
-        .where('fecha', '<=', hasta)
-        .get();
+      // Obtener movimientos y paquetes
+      const [entradasSnap, salidasSnap, paquetesSnap] = await Promise.all([
+        db.collection('movimientos')
+          .where('tipo', '==', 'entrada')
+          .where('fecha', '>=', desdeUTC)
+          .where('fecha', '<=', hastaUTC)
+          .get(),
+        db.collection('movimientos')
+          .where('tipo', '==', 'salida')
+          .where('fecha', '>=', desdeUTC)
+          .where('fecha', '<=', hastaUTC)
+          .get(),
+        db.collection('paquetes').get()
+      ]);
 
-      // Obtener datos de salidas
-      const salidasSnap = await db.collection('movimientos')
-        .where('tipo', '==', 'salida')
-        .where('fecha', '>=', desde)
-        .where('fecha', '<=', hasta)
-        .get();
+      // Crear mapa de paquetes para acceso rápido
+      const paquetesMap = {};
+      paquetesSnap.docs.forEach(doc => {
+        paquetesMap[doc.id] = doc.data();
+      });
 
-      // Modificar los encabezados de las tablas de reportes
-      const reportEntHeaders = document.querySelector('#report-entradas thead tr');
-      const reportSalHeaders = document.querySelector('#report-salidas thead tr');
-      reportEntHeaders.innerHTML = `
-        <th>Fecha</th>
-        <th>Material</th>
-        <th>Peso Total (kg)</th>
-      `;
-      reportSalHeaders.innerHTML = `
-        <th>Fecha</th>
-        <th>Material</th>
-        <th>Peso Total (kg)</th>
-      `;
-
-      // Entradas con fechas ajustadas
+      // Procesar entradas usando los valores actuales de los paquetes
       const grpEnt = {}; 
       let sumEnt = 0;
       entradasSnap.docs.forEach(d => {
@@ -1086,6 +1284,10 @@
           year: '2-digit'
         });
         
+        // Usar el peso actual del paquete en lugar del peso del movimiento
+        const paqueteActual = paquetesMap[data.paqueteId];
+        const pesoActual = paqueteActual ? paqueteActual.peso_actual : data.peso;
+        
         if (!grpEnt[data.materialId]) {
           grpEnt[data.materialId] = {
             fechas: {},
@@ -1095,9 +1297,9 @@
         if (!grpEnt[data.materialId].fechas[fechaFormateada]) {
           grpEnt[data.materialId].fechas[fechaFormateada] = 0;
         }
-        grpEnt[data.materialId].fechas[fechaFormateada] += data.peso;
-        grpEnt[data.materialId].total += data.peso;
-        sumEnt += data.peso;
+        grpEnt[data.materialId].fechas[fechaFormateada] += pesoActual;
+        grpEnt[data.materialId].total += pesoActual;
+        sumEnt += pesoActual;
       });
 
       const reportEnt = document.getElementById('report-entradas').querySelector('tbody');
@@ -1189,45 +1391,56 @@
       renderInventario();
     })();
 
-    // Agregar las validaciones de fechas
-    document.addEventListener('DOMContentLoaded', () => {
-      const fechaDesde = document.getElementById('fecha-desde');
-      const fechaHasta = document.getElementById('fecha-hasta');
-      const btnReporte = document.getElementById('btn-reporte');
+    // Remover el DOMContentLoaded event listener actual y reemplazarlo con una función inmediata
+function setupFechasValidation() {
+  const fechaDesde = document.getElementById('fecha-desde');
+  const fechaHasta = document.getElementById('fecha-hasta');
+  const btnReporte = document.getElementById('btn-reporte');
 
-      // Establecer la fecha máxima para "Desde" como el día actual
-      const hoy = new Date();
-      const formatoHoy = hoy.toISOString().split('T')[0];
-      fechaDesde.max = formatoHoy;
+  // Función para obtener la fecha actual en formato YYYY-MM-DD
+  function getToday() {
+    const today = new Date();
+    today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+    return today.toISOString().split('T')[0];
+  }
 
-      // Validar la fecha "Desde"
-      fechaDesde.addEventListener('change', () => {
-        // Asegurarse que "Hasta" no sea anterior a "Desde"
-        fechaHasta.min = fechaDesde.value;
-        
-        validarFechas();
-      });
+  // Establecer la fecha máxima inicial y actualizarla cuando se enfoque el input
+  fechaDesde.max = getToday();
+  fechaDesde.addEventListener('focus', () => {
+    fechaDesde.max = getToday();
+  });
 
-      // Validar la fecha "Hasta"
-      fechaHasta.addEventListener('change', validarFechas);
+  // Validar fechas existentes
+  fechaDesde.addEventListener('input', () => {
+    fechaHasta.min = fechaDesde.value;
+    validarFechas();
+  });
 
-      function validarFechas() {
-        const desde = new Date(fechaDesde.value);
-        const hasta = new Date(fechaHasta.value);
-        
-        if (fechaDesde.value && fechaHasta.value) {
-          if (desde > hasta) {
-            alert('La fecha "Hasta" no puede ser anterior a la fecha "Desde"');
-            fechaHasta.value = '';
-            btnReporte.disabled = true;
-            return false;
-          }
-        }
-        
-        btnReporte.disabled = !(fechaDesde.value && fechaHasta.value);
-        return true;
+  fechaHasta.addEventListener('input', validarFechas);
+
+  function validarFechas() {
+    const desde = new Date(fechaDesde.value);
+    const hasta = new Date(fechaHasta.value);
+    
+    if (fechaDesde.value && fechaHasta.value) {
+      if (desde > hasta) {
+        alert('La fecha "Hasta" no puede ser anterior a la fecha "Desde"');
+        fechaHasta.value = '';
+        btnReporte.disabled = true;
+        return false;
       }
-    });
+    }
+    
+    btnReporte.disabled = !(fechaDesde.value && fechaHasta.value);
+    return true;
+  }
+
+  // Validar valores iniciales
+  validarFechas();
+}
+
+// Llamar a la función de inmediato
+setupFechasValidation();
 
     function setupDragAndDrop() {
       if (!inventarioEditMode) return;
@@ -1292,9 +1505,98 @@
         });
       });
     }
-  </script>
 
-  <!-- Agregar loading state para operaciones -->
+    // Modificar el evento de cambio del input de material para salidas
+document.getElementById('salida-material').addEventListener('input', async e => {
+  const input = e.target;
+  const calibreSelect = document.getElementById('salida-calibre');
+  const datalist = document.getElementById('datalist-salida');
+  const errorDiv = document.getElementById('error-salida-material');
+  errorDiv.textContent = '';
+
+  // Limpiar selectores dependientes
+  calibreSelect.innerHTML = '<option disabled selected>Seleccione calibre</option>';
+  document.querySelectorAll('.salida-paquete').forEach(select => {
+    select.innerHTML = '<option disabled selected>Seleccione paquete</option>';
+  });
+
+  // Si no hay valor, mostrar todos los materiales
+  if (!input.value) {
+    try {
+      const matsSnap = await db.collection('materiales').get();
+      datalist.innerHTML = '';
+      const nombres = new Set();
+      matsSnap.docs.forEach(doc => {
+        const nombre = doc.data().nombre;
+        nombres.add(nombre);
+      });
+      nombres.forEach(nombre => {
+        const option = document.createElement('option');
+        option.value = nombre;
+        datalist.appendChild(option);
+      });
+    } catch (error) {
+      console.error('Error al cargar materiales:', error);
+    }
+    return;
+  }
+
+  try {
+    // Buscar materiales que contengan el texto ingresado (case insensitive)
+    const searchText = input.value.toLowerCase();
+    const matsSnap = await db.collection('materiales').get();
+    
+    datalist.innerHTML = '';
+    const nombres = new Set();
+    
+    matsSnap.docs.forEach(doc => {
+      const nombre = doc.data().nombre;
+      if (nombre.toLowerCase().includes(searchText)) {
+        nombres.add(nombre);
+      }
+    });
+
+    nombres.forEach(nombre => {
+      const option = document.createElement('option');
+      option.value = nombre;
+      datalist.appendChild(option);
+    });
+
+  } catch (error) {
+    console.error('Error al buscar materiales:', error);
+    errorDiv.textContent = 'Error al buscar materiales';
+  }
+});
+
+// Modificar el evento de cambio del selector de calibre
+document.getElementById('salida-calibre').addEventListener('change', function() {
+  const tipoSelect = document.getElementById('salida-tipo');
+  
+  // Limpiar y deshabilitar selectores dependientes
+  document.querySelectorAll('.salida-paquete').forEach(select => {
+    select.innerHTML = '<option disabled selected>Seleccione paquete</option>';
+  });
+
+  // Si no hay valor seleccionado, salir
+  if (!this.value) return;
+
+  try {
+    const data = JSON.parse(this.value);
+    const tipos = [...new Set(data.tipos.map(t => t.tipo))];
+
+    // Actualizar opciones del selector de tipo
+    tipoSelect.innerHTML = '<option disabled selected>Seleccione un tipo</option>';
+    tipos.forEach(tipo => {
+      const opt = document.createElement('option');
+      opt.value = tipo;
+      opt.textContent = tipo === 'segunda' ? 'Segunda' : 'Overrolling';
+      tipoSelect.appendChild(opt);
+    });
+  } catch (error) {
+    console.error('Error al procesar calibre:', error);
+  }
+});
+    </script>
   <div id="loading-overlay" class="hidden">
     <div class="spinner"></div>
     <p>Procesando...</p>
