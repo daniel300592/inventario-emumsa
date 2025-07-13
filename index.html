@@ -1166,7 +1166,7 @@
     document.getElementById('form-nuevo-item')
       .addEventListener('submit', async e => {
         e.preventDefault();
-        const n = document.getElementById('nuevo-nombre').value.trim();
+        const n = toProperCase(document.getElementById('nuevo-nombre').value.trim());
         const cl = document.getElementById('nuevo-calibre').value.trim();
         const cat = document.getElementById('nuevo-categoria').value;
         const tipo = document.getElementById('nuevo-tipo').value;
@@ -1596,6 +1596,13 @@ document.getElementById('salida-calibre').addEventListener('change', function() 
     console.error('Error al procesar calibre:', error);
   }
 });
+
+// Convierte un string a formato Proper Case
+function toProperCase(str) {
+  return str
+    .toLowerCase()
+    .replace(/\b\w/g, l => l.toUpperCase());
+}
     </script>
   <div id="loading-overlay" class="hidden">
     <div class="spinner"></div>
